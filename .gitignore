@@ -23,6 +23,11 @@ service-account*.json
 backend/.clasp.json
 *.clasprc.json
 
+# Cloudflare / Wrangler
+.wrangler/
+wrangler.toml
+wrangler.jsonc
+
 # Project documentation (git-ignored per user request)
 Doc/
 
