@@ -35,6 +35,7 @@ export default function LoginPage() {
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
@@ -92,6 +93,13 @@ export default function LoginPage() {
           </Button>
         </form>
       </div>
+
+      <p style={{ marginTop: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+        Designed by:{' '}
+        <a href="https://mk9.in" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-brand)', fontWeight: 'var(--weight-medium)' }}>
+          MAMK
+        </a>
+      </p>
     </div>
   );
 }

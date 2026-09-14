@@ -22,7 +22,15 @@ export function AppFooter({ version, className = '' }: AppFooterProps) {
       }}
     >
       <span>Housing Society Management</span>
-      {version && <span>v{version}</span>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        <span>
+          Designed by:{' '}
+          <a href="https://mk9.in" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontWeight: 'var(--weight-medium)' }}>
+            MAMK
+          </a>
+        </span>
+        {version && <span>v{version}</span>}
+      </div>
     </footer>
   );
 }
