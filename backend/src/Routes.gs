@@ -410,7 +410,7 @@ var Routes = (function () {
     'adjustments.list': {
       permission: 'payments.read',
       validate: validatePagination,
-      handler: function (ctx) { return PaymentService.listAdjustments(ctx); },
+      handler: function (ctx) { return MaintenanceService.listAdjustments(ctx); },
       scope: 'MEMBER_SELF'
     },
 
@@ -424,7 +424,7 @@ var Routes = (function () {
         requireField('reason', 'Reason'),
         requireClientId
       ),
-      handler: function (ctx) { return PaymentService.createAdjustment(ctx); },
+      handler: function (ctx) { return MaintenanceService.createAdjustment(ctx); },
       scope: 'GLOBAL'
     },
 
@@ -1026,7 +1026,7 @@ var Routes = (function () {
     'reports.export': {
       permission: 'reports.export',
       validate: validate(requireField('reportKey', 'Report'), requireField('format', 'Format'), requireClientId),
-      handler: function (ctx) { return ReportService.export(ctx); },
+      handler: function (ctx) { return ReportService.exportReport(ctx); },
       scope: 'GLOBAL'
     },
 

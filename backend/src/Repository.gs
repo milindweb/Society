@@ -259,11 +259,15 @@ var Repository = (function () {
    */
   function insert(sheetName, record, actor) {
     var def = Schema.get(sheetName);
-    var id = Utils.newId(def.prefix);
     var ts = Utils.now();
     var userId = actor && actor.userId ? actor.userId : '';
     var row = Object.assign({}, record);
-    row[def.idColumn] = id;
+    // Natural-key sheets (empty prefix) keep the caller-supplied key; prefixed sheets auto-generate.
+    if (!def.prefix) {
+      row[def.idColumn] = record[def.idColumn];
+    } else {
+      row[def.idColumn] = Utils.newId(def.prefix);
+    }
 
     if (def.tail === 'AUDIT') {
       row.createdAt = ts;
@@ -298,8 +302,11 @@ var Repository = (function () {
     var created = [];
     for (var i = 0; i < records.length; i++) {
       var rec = Object.assign({}, records[i]);
-      var id = Utils.newId(def.prefix);
-      rec[def.idColumn] = id;
+      if (!def.prefix) {
+        rec[def.idColumn] = records[i][def.idColumn];
+      } else {
+        rec[def.idColumn] = Utils.newId(def.prefix);
+      }
       if (def.tail === 'AUDIT') {
         rec.createdAt = ts;
         rec.updatedAt = ts;

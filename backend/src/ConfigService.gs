@@ -659,6 +659,132 @@ var ConfigService = (function () {
   }
 
   // ---------------------------------------------------------------------------
+  // Route-facing (ctx-based) wrappers — names match Routes.gs handlers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * setup.status — isConfigured, schemaVersion, timezone, row counts.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function getStatus(ctx) {
+    var isConfigured = false;
+    var timezone = 'Asia/Kolkata';
+    try {
+      var config = get();
+      isConfigured = !!config.isConfigured;
+      timezone = config.timezone || timezone;
+    } catch (e) { /* not installed yet */ }
+
+    var counts = {};
+    try {
+      ['Flats', 'Members', 'Payments', 'Complaints', 'Visitors'].forEach(function (name) {
+        try { counts[name] = Repository.count(name); } catch (e2) { counts[name] = 0; }
+      });
+    } catch (e3) { /* ignore */ }
+
+    return {
+      ok: true,
+      data: {
+        isConfigured: isConfigured,
+        schemaVersion: Schema.SCHEMA_VERSION,
+        timezone: timezone,
+        counts: counts
+      }
+    };
+  }
+
+  /**
+   * setup.complete — mark society configured and write identity fields.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function completeSetup(ctx) {
+    var p = ctx.payload || {};
+    var values = { isConfigured: true };
+    ['societyName', 'societyAddress', 'registrationNumber', 'societyEmail', 'societyPhone'].forEach(function (k) {
+      if (p[k] !== undefined && p[k] !== null) { values[k] = p[k]; }
+    });
+    var result = update(values, ctx.user);
+    return { ok: true, data: { isConfigured: true, config: result.config } };
+  }
+
+  /**
+   * config.get — society identity + locale + formatting + limits (secrets blanked).
+   */
+  function getConfig(ctx) {
+    return { ok: true, data: get() };
+  }
+
+  /**
+   * config.update — write config values.
+   */
+  function updateConfig(ctx) {
+    var p = ctx.payload || {};
+    var values = p.values || p;
+    var result = update(values, ctx.user);
+    return { ok: true, data: result };
+  }
+
+  /**
+   * config.entityMeta — descriptor(s) for Settings UI.
+   */
+  function getEntityMeta(ctx) {
+    var p = ctx.payload || {};
+    return { ok: true, data: entityMeta(p.entity) };
+  }
+
+  /**
+   * config.entity.list — paginated master rows.
+   */
+  function listEntity(ctx) {
+    var p = ctx.payload || {};
+    return { ok: true, data: entityList(p.entity, p) };
+  }
+
+  /**
+   * config.entity.get — single master row.
+   */
+  function getEntity(ctx) {
+    var p = ctx.payload || {};
+    var rec = entityGet(p.entity, p.id);
+    if (rec === null || rec === undefined) { return { ok: false, error: 'NOT_FOUND' }; }
+    return { ok: true, data: rec };
+  }
+
+  /**
+   * config.entity.create — create a master row.
+   */
+  function createEntity(ctx) {
+    var p = ctx.payload || {};
+    var rec = entityCreate(p.entity, p.values, ctx.user);
+    if (rec && rec.error) { return { ok: false, error: rec.error, details: rec.details }; }
+    return { ok: true, data: rec };
+  }
+
+  /**
+   * config.entity.update — update a master row.
+   */
+  function updateEntity(ctx) {
+    var p = ctx.payload || {};
+    var rec = entityUpdate(p.entity, p.id, p.values, ctx.user);
+    if (rec === null || rec === undefined) { return { ok: false, error: 'NOT_FOUND' }; }
+    return { ok: true, data: rec };
+  }
+
+  /**
+   * config.entity.setStatus — ACTIVE/INACTIVE with dependency check.
+   */
+  function setEntityStatus(ctx) {
+    var p = ctx.payload || {};
+    var result = entitySetStatus(p.entity, p.id, p.status, ctx.user);
+    if (!result.ok) {
+      return { ok: false, error: result.error, details: result.details, count: result.count };
+    }
+    return { ok: true, data: result.record };
+  }
+
+  // ---------------------------------------------------------------------------
   // Expose
   // ---------------------------------------------------------------------------
 
@@ -675,6 +801,17 @@ var ConfigService = (function () {
     entitySetStatus: entitySetStatus,
     checkDependencies: checkDependencies,
     castConfigValue: castConfigValue,
-    invalidateConfigCache: invalidateConfigCache
+    invalidateConfigCache: invalidateConfigCache,
+    // Route-facing wrappers
+    getStatus: getStatus,
+    completeSetup: completeSetup,
+    getConfig: getConfig,
+    updateConfig: updateConfig,
+    getEntityMeta: getEntityMeta,
+    listEntity: listEntity,
+    getEntity: getEntity,
+    createEntity: createEntity,
+    updateEntity: updateEntity,
+    setEntityStatus: setEntityStatus
   };
 })();

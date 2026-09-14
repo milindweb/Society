@@ -675,6 +675,544 @@ var AuthService = (function () {
     return parts[1] || null;
   }
 
+  // --------------------------------------------------------------------------- Health
+
+  /**
+   * Public health/version probe.
+   * @return {{ ok: boolean, data: object }}
+   */
+  function health() {
+    var isConfigured = false;
+    try {
+      if (typeof ConfigService !== 'undefined' && ConfigService.get) {
+        isConfigured = !!ConfigService.get().isConfigured;
+      }
+    } catch (e) { /* not installed yet */ }
+    return {
+      ok: true,
+      data: {
+        status: 'ok',
+        schemaVersion: typeof Schema !== 'undefined' ? Schema.SCHEMA_VERSION : 0,
+        appVersion: typeof Schema !== 'undefined' ? Schema.APP_VERSION : '',
+        isConfigured: isConfigured
+      }
+    };
+  }
+
+  // --------------------------------------------------------------------------- User management
+
+  /** Build a client-safe user view (roleKeys as array, no secrets). */
+  function userView(user) {
+    var safe = sanitizeUser(user);
+    safe.roleKeys = Utils.csvToArray(user.roleKeys);
+    safe.mustChangePassword = user.mustChangePassword === 'TRUE' || user.mustChangePassword === true;
+    return safe;
+  }
+
+  /**
+   * List users (never password fields).
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: Array, page: object }}
+   */
+  function listUsers(ctx) {
+    var p = ctx.payload || {};
+    var filter = {};
+    if (p.statusKey) { filter.statusKey = p.statusKey; }
+    if (p.roleKey) { filter.roleKey = p.roleKey; }
+
+    var result = Repository.readSheet('Users', {
+      page: p.page || 1,
+      pageSize: p.pageSize || CONFIG.pageSizeDefault(),
+      search: p.search || '',
+      searchFields: ['username', 'email', 'fullName', 'mobile'],
+      sort: p.sort || 'createdAt',
+      sortDir: p.sortDir || 'desc',
+      filter: filter
+    });
+
+    // If roleKey filter is requested, match against CSV roleKeys
+    var rows = result.rows;
+    if (p.roleKey) {
+      rows = rows.filter(function (u) {
+        return Utils.csvToArray(u.roleKeys).indexOf(p.roleKey) !== -1;
+      });
+    }
+
+    return { ok: true, data: rows.map(userView), page: result.page };
+  }
+
+  /**
+   * Get a single user + roles + linked member/employee.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function getUser(ctx) {
+    var p = ctx.payload || {};
+    var user = Repository.findById('Users', p.userId);
+    if (!user) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var view = userView(user);
+    view.permissions = RbacService.resolvePermissions(user.roleKeys);
+
+    // Linked member / employee summaries
+    if (user.memberId) {
+      var member = Repository.findById('Members', user.memberId);
+      if (member) { view.member = { memberId: member.memberId, fullName: member.fullName, flatId: member.flatId }; }
+    }
+    if (user.employeeId) {
+      var emp = Repository.findById('Employees', user.employeeId);
+      if (emp) { view.employee = { employeeId: emp.employeeId, fullName: emp.fullName, employeeCode: emp.employeeCode }; }
+    }
+
+    return { ok: true, data: view };
+  }
+
+  /**
+   * Create a user with a temporary password (mustChangePassword=TRUE).
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function createUser(ctx) {
+    var p = ctx.payload || {};
+
+    var username = String(p.username || '').trim();
+    var email = Utils.normaliseEmail(p.email || '');
+    if (!username) { return { ok: false, error: 'VALIDATION_ERROR', message: 'Username is required.' }; }
+    if (!Utils.isEmail(email)) { return { ok: false, error: 'VALIDATION_ERROR', message: 'Invalid email.' }; }
+
+    // Uniqueness
+    if (Repository.countBy('Users', { username: username }).exists) {
+      return { ok: false, error: 'CONFLICT_ERROR', message: 'Username already exists.' };
+    }
+    if (email && Repository.countBy('Users', { email: email }).exists) {
+      return { ok: false, error: 'CONFLICT_ERROR', message: 'Email already exists.' };
+    }
+
+    var tempPassword = p.temporaryPassword || '';
+    var validation = validatePassword(tempPassword, username, email);
+    if (!validation.valid) {
+      return { ok: false, error: 'VALIDATION_ERROR', message: validation.message };
+    }
+
+    var roleKeys = Array.isArray(p.roleKeys) ? p.roleKeys : Utils.csvToArray(p.roleKeys);
+    if (roleKeys.length === 0) {
+      return { ok: false, error: 'VALIDATION_ERROR', message: 'At least one role is required.' };
+    }
+
+    var hashed = Utils.hashPassword(tempPassword);
+
+    var created = Repository.withLock(function () {
+      return Repository.insert('Users', {
+        username: username,
+        email: email,
+        mobile: p.mobile || '',
+        fullName: p.fullName || '',
+        passwordHash: hashed.hash,
+        passwordSalt: hashed.salt,
+        passwordAlgo: hashed.algo,
+        roleKeys: Utils.arrayToCsv(roleKeys),
+        memberId: p.memberId || '',
+        employeeId: p.employeeId || '',
+        flatId: p.flatId || '',
+        statusKey: 'ACTIVE',
+        mustChangePassword: 'TRUE',
+        failedAttempts: '0',
+        lockedUntil: '',
+        passwordChangedAt: ''
+      }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:create-user');
+
+    Audit.writeAuth({
+      action: 'USER_CREATED',
+      entity: 'Users',
+      entityId: created.userId,
+      detail: { username: username, email: email, roleKeys: roleKeys },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: userView(created) };
+  }
+
+  /**
+   * Update a user (never password fields here; use resetPassword).
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function updateUser(ctx) {
+    var p = ctx.payload || {};
+    var user = Repository.findById('Users', p.userId);
+    if (!user) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var values = p.values || {};
+    var patch = {};
+    var allowed = ['username', 'email', 'mobile', 'fullName', 'memberId', 'employeeId', 'flatId'];
+
+    if (values.username !== undefined && values.username !== '') {
+      if (Repository.countBy('Users', { username: String(values.username) }).exists &&
+          String(values.username) !== user.username) {
+        return { ok: false, error: 'CONFLICT_ERROR', message: 'Username already exists.' };
+      }
+    }
+
+    allowed.forEach(function (k) {
+      if (values[k] !== undefined) { patch[k] = values[k]; }
+    });
+
+    if (values.roleKeys !== undefined) {
+      var roleKeys = Array.isArray(values.roleKeys) ? values.roleKeys : Utils.csvToArray(values.roleKeys);
+      patch.roleKeys = Utils.arrayToCsv(roleKeys);
+    }
+
+    var updated = Repository.withLock(function () {
+      return Repository.updateById('Users', p.userId, patch, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:update-user');
+
+    if (!updated) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    Audit.writeAuth({
+      action: 'USER_UPDATED',
+      entity: 'Users',
+      entityId: p.userId,
+      detail: { changed: Object.keys(patch) },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: userView(updated) };
+  }
+
+  /**
+   * Set user status (ACTIVE/INACTIVE/LOCKED); revokes sessions when disabling.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function setUserStatus(ctx) {
+    var p = ctx.payload || {};
+    var status = String(p.status || '').toUpperCase();
+    if (['ACTIVE', 'INACTIVE', 'LOCKED'].indexOf(status) === -1) {
+      return { ok: false, error: 'VALIDATION_ERROR', message: 'Status must be ACTIVE, INACTIVE or LOCKED.' };
+    }
+
+    var user = Repository.findById('Users', p.userId);
+    if (!user) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var patch = { statusKey: status };
+    if (status !== 'LOCKED') {
+      patch.failedAttempts = '0';
+      patch.lockedUntil = '';
+    }
+
+    var updated = Repository.withLock(function () {
+      return Repository.updateById('Users', p.userId, patch, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:set-user-status');
+
+    if (status !== 'ACTIVE') {
+      revokeAllSessions(p.userId, ctx.user ? ctx.user.userId : 'SYSTEM');
+    }
+
+    Audit.writeAuth({
+      action: 'USER_STATUS_CHANGED',
+      entity: 'Users',
+      entityId: p.userId,
+      detail: { status: status, reason: p.reason || '' },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: userView(updated) };
+  }
+
+  /**
+   * Reset a user's password with a temporary password (mustChangePassword=TRUE).
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function resetPassword(ctx) {
+    var p = ctx.payload || {};
+    var user = Repository.findById('Users', p.userId);
+    if (!user) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var tempPassword = p.temporaryPassword || '';
+    var validation = validatePassword(tempPassword, user.username, user.email);
+    if (!validation.valid) {
+      return { ok: false, error: 'VALIDATION_ERROR', message: validation.message };
+    }
+
+    var hashed = Utils.hashPassword(tempPassword);
+
+    var updated = Repository.withLock(function () {
+      return Repository.updateById('Users', p.userId, {
+        passwordHash: hashed.hash,
+        passwordSalt: hashed.salt,
+        passwordAlgo: hashed.algo,
+        mustChangePassword: 'TRUE',
+        passwordChangedAt: Utils.now()
+      }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:reset-password');
+
+    revokeAllSessions(p.userId, ctx.user ? ctx.user.userId : 'SYSTEM');
+
+    Audit.writeAuth({
+      action: 'PASSWORD_RESET',
+      entity: 'Users',
+      entityId: p.userId,
+      detail: {},
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: userView(updated) };
+  }
+
+  // --------------------------------------------------------------------------- Role management
+
+  /**
+   * List roles.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: Array, page: object }}
+   */
+  function listRoles(ctx) {
+    var p = ctx.payload || {};
+    var result = Repository.readSheet('Roles', {
+      page: p.page || 1,
+      pageSize: p.pageSize || CONFIG.pageSizeDefault(),
+      search: p.search || '',
+      searchFields: ['roleKey', 'roleName'],
+      sort: p.sort || 'sortOrder',
+      sortDir: p.sortDir || 'asc',
+      filter: p.status ? { status: p.status } : {}
+    });
+
+    var rows = result.rows.map(function (r) {
+      return {
+        roleKey: r.roleKey,
+        roleName: r.roleName,
+        description: r.description || '',
+        isSystem: r.isSystem === 'TRUE' || r.isSystem === true,
+        statusKey: r.status || ''
+      };
+    });
+
+    return { ok: true, data: rows, page: result.page };
+  }
+
+  /**
+   * Create a role.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function createRole(ctx) {
+    var p = ctx.payload || {};
+    var roleKey = String(p.roleKey || '').trim().toUpperCase();
+    var roleName = String(p.roleName || '').trim();
+    if (!roleKey) { return { ok: false, error: 'VALIDATION_ERROR', message: 'Role key is required.' }; }
+    if (!roleName) { return { ok: false, error: 'VALIDATION_ERROR', message: 'Role name is required.' }; }
+
+    if (Repository.countBy('Roles', { roleKey: roleKey }).exists) {
+      return { ok: false, error: 'CONFLICT_ERROR', message: 'Role already exists.' };
+    }
+
+    var created = Repository.withLock(function () {
+      return Repository.insert('Roles', {
+        roleKey: roleKey,
+        roleName: roleName,
+        description: p.description || '',
+        isSystem: 'FALSE',
+        sortOrder: '0',
+        status: 'ACTIVE'
+      }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:create-role');
+
+    Audit.writeAuth({
+      action: 'ROLE_CREATED',
+      entity: 'Roles',
+      entityId: roleKey,
+      detail: { roleName: roleName },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: { roleKey: created.roleKey, roleName: created.roleName, description: created.description || '', isSystem: false, statusKey: created.status } };
+  }
+
+  /**
+   * Update a role.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function updateRole(ctx) {
+    var p = ctx.payload || {};
+    var role = Repository.findById('Roles', p.roleKey);
+    if (!role) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var values = p.values || {};
+    var patch = {};
+    if (values.roleName !== undefined) { patch.roleName = values.roleName; }
+    if (values.description !== undefined) { patch.description = values.description; }
+
+    var updated = Repository.withLock(function () {
+      return Repository.updateById('Roles', p.roleKey, patch, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:update-role');
+
+    Audit.writeAuth({
+      action: 'ROLE_UPDATED',
+      entity: 'Roles',
+      entityId: p.roleKey,
+      detail: { changed: Object.keys(patch) },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: { roleKey: updated.roleKey, roleName: updated.roleName, description: updated.description || '', isSystem: updated.isSystem === 'TRUE', statusKey: updated.status } };
+  }
+
+  /**
+   * Set role status; refuses when active users still hold it.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function setRoleStatus(ctx) {
+    var p = ctx.payload || {};
+    var status = String(p.status || '').toUpperCase();
+    if (status !== 'ACTIVE' && status !== 'INACTIVE') {
+      return { ok: false, error: 'VALIDATION_ERROR', message: 'Status must be ACTIVE or INACTIVE.' };
+    }
+
+    var role = Repository.findById('Roles', p.roleKey);
+    if (!role) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    if (status === 'INACTIVE') {
+      var holderCount = 0;
+      try {
+        var users = Repository.readSheet('Users', { page: 1, pageSize: 100 });
+        holderCount = users.rows.filter(function (u) {
+          return u.statusKey === 'ACTIVE' && Utils.csvToArray(u.roleKeys).indexOf(p.roleKey) !== -1;
+        }).length;
+      } catch (e) { /* ignore */ }
+      if (holderCount > 0) {
+        return { ok: false, error: 'DEPENDENCY_EXISTS', message: 'Active users still hold this role.' };
+      }
+    }
+
+    var updated = Repository.withLock(function () {
+      return Repository.updateById('Roles', p.roleKey, { status: status }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+    }, 'auth:set-role-status');
+
+    Audit.writeAuth({
+      action: 'ROLE_STATUS_CHANGED',
+      entity: 'Roles',
+      entityId: p.roleKey,
+      detail: { status: status },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: { roleKey: updated.roleKey, roleName: updated.roleName, statusKey: updated.status } };
+  }
+
+  // --------------------------------------------------------------------------- Permissions
+
+  /**
+   * List permissions catalog.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: Array }}
+   */
+  function listPermissions(ctx) {
+    var p = ctx.payload || {};
+    var result = Repository.readSheet('Permissions', {
+      page: 1,
+      pageSize: 1000,
+      filter: p.module ? { module: p.module } : {}
+    });
+    var rows = result.rows.map(function (r) {
+      return {
+        permissionKey: r.permissionKey,
+        module: r.module,
+        action: r.action,
+        description: r.description || '',
+        status: r.status || ''
+      };
+    });
+    return { ok: true, data: rows };
+  }
+
+  /**
+   * Permission matrix for one role.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function getRolePermissions(ctx) {
+    var p = ctx.payload || {};
+    var role = Repository.findById('Roles', p.roleKey);
+    if (!role) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var result = Repository.readSheet('Role_Permissions', { page: 1, pageSize: 1000 });
+    var matrix = {};
+    result.rows.forEach(function (r) {
+      if (r.roleKey === p.roleKey) {
+        matrix[r.permissionKey] = r.isAllowed === 'TRUE' || r.isAllowed === true;
+      }
+    });
+
+    return { ok: true, data: { roleKey: p.roleKey, permissions: matrix } };
+  }
+
+  /**
+   * Update the permission matrix for a role.
+   * @param {object} ctx
+   * @return {{ ok: boolean, data: object }}
+   */
+  function updateRolePermissions(ctx) {
+    var p = ctx.payload || {};
+    var role = Repository.findById('Roles', p.roleKey);
+    if (!role) { return { ok: false, error: 'NOT_FOUND' }; }
+
+    var entries = p.entries || [];
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return { ok: false, error: 'VALIDATION_ERROR', message: 'entries[] is required.' };
+    }
+
+    Repository.withLock(function () {
+      entries.forEach(function (entry) {
+        var permissionKey = entry.permissionKey;
+        var isAllowed = entry.isAllowed === true || entry.isAllowed === 'TRUE';
+        var existing = Repository.countBy('Role_Permissions', { roleKey: p.roleKey, permissionKey: permissionKey });
+        if (existing.exists) {
+          var sheet = Repository.getSheet('Role_Permissions');
+          var map = Repository.headerMap('Role_Permissions');
+          var lastRow = sheet.getLastRow();
+          var columns = Schema.columnsOf('Role_Permissions');
+          var values = sheet.getRange(2, 1, lastRow - 1, columns.length).getValues();
+          for (var i = 0; i < values.length; i++) {
+            var rec = Repository.fromRow('Role_Permissions', values[i]);
+            if (rec.roleKey === p.roleKey && rec.permissionKey === permissionKey) {
+              Repository.updateById('Role_Permissions', rec.rolePermissionId, { isAllowed: isAllowed ? 'TRUE' : 'FALSE' }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+              break;
+            }
+          }
+        } else {
+          Repository.insert('Role_Permissions', {
+            roleKey: p.roleKey,
+            permissionKey: permissionKey,
+            isAllowed: isAllowed ? 'TRUE' : 'FALSE'
+          }, { userId: ctx.user ? ctx.user.userId : 'SYSTEM' });
+        }
+      });
+    }, 'auth:update-role-permissions');
+
+    Audit.writeAuth({
+      action: 'PERMISSION_CHANGED',
+      entity: 'Roles',
+      entityId: p.roleKey,
+      detail: { permissions: entries },
+      result: 'SUCCESS',
+      actorUserId: ctx.user ? ctx.user.userId : 'SYSTEM'
+    });
+
+    return { ok: true, data: getRolePermissions(ctx).data };
+  }
+
   // --------------------------------------------------------------------------- Expose
 
   return {
@@ -697,6 +1235,24 @@ var AuthService = (function () {
     me: me,
     listSessions: listSessions,
     sanitizeUser: sanitizeUser,
-    extractToken: extractToken
+    extractToken: extractToken,
+    // Health
+    health: health,
+    // User management
+    listUsers: listUsers,
+    getUser: getUser,
+    createUser: createUser,
+    updateUser: updateUser,
+    setUserStatus: setUserStatus,
+    resetPassword: resetPassword,
+    // Role management
+    listRoles: listRoles,
+    createRole: createRole,
+    updateRole: updateRole,
+    setRoleStatus: setRoleStatus,
+    // Permissions
+    listPermissions: listPermissions,
+    getRolePermissions: getRolePermissions,
+    updateRolePermissions: updateRolePermissions
   };
 })();
