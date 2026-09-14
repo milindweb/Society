@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+coverage/
+.playwright/
+test-results/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json
+
+# Google Apps Script
+backend/.clasp.json
+*.clasprc.json
+
+# Project documentation (git-ignored per user request)
+Doc/
+
+# Tests (git-ignored per user request)
+tests/
+
+# Reference secrets
+.env.original
+
+# Local/test data
+tests/fixtures/private/
+tests/output/
+*.log
+*.tmp
+*.tsbuildinfo
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated artifacts
+appsscript.json

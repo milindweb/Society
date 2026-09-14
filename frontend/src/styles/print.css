@@ -1,0 +1,42 @@
+/* print.css — Print styles */
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .hs-no-print,
+  .hs-sidebar,
+  .hs-header,
+  .hs-footer,
+  .hs-mobile-nav,
+  .hs-toolbar,
+  .hs-pagination,
+  .hs-modal-overlay {
+    display: none !important;
+  }
+
+  .hs-card {
+    border: 1px solid #ddd;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .hs-page-header {
+    margin-bottom: 1rem;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .hs-badge {
+    border: 1px solid currentColor;
+  }
+
+  @page {
+    margin: 1cm;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "society-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Housing Society Management Web App - monorepo root (backend/GAS tests, E2E, local API harness)",
+  "type": "commonjs",
+  "scripts": {
+    "api": "node scripts/localApiServer.js",
+    "test:backend": "node --test tests/backend",
+    "test:schema": "node --test tests/schema",
+    "test:api": "node --test tests/api",
+    "test:integration": "node --test tests/integration",
+    "test:security": "node --test tests/security",
+    "test:perf": "node --test tests/performance",
+    "test:all": "node --test tests/backend/*.test.js tests/schema/*.test.js tests/api/*.test.js tests/integration/*.test.js tests/security/*.test.js tests/performance/*.test.js",
+    "test:frontend": "npm --prefix frontend run test",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "lint": "npm --prefix frontend run lint",
+    "build": "npm --prefix frontend run build",
+    "e2e": "playwright test -c tests/e2e/playwright.config.js",
+    "e2e:live": "playwright test -c tests/e2e/playwright.config.js --grep @live",
+    "check": "npm run test:all && npm --prefix frontend run typecheck && npm --prefix frontend run lint && npm --prefix frontend run test && npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

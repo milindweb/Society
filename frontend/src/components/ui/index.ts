@@ -1,0 +1,34 @@
+/* components/ui/index.ts — barrel export */
+
+export { Button } from './Button';
+export { IconButton } from './IconButton';
+export { Input } from './Input';
+export { Textarea } from './Textarea';
+export { Select } from './Select';
+export { Checkbox } from './Checkbox';
+export { Radio } from './Radio';
+export { Switch } from './Switch';
+export { FormField } from './FormField';
+export { Card, CardHeader, CardBody, CardFooter } from './Card';
+export { Badge } from './Badge';
+export { StatusBadge } from './StatusBadge';
+export { Alert } from './Alert';
+export { Toast, ToastContainer } from './Toast';
+export { Modal } from './Modal';
+export { ConfirmDialog } from './ConfirmDialog';
+export { Drawer } from './Drawer';
+export { Dropdown } from './Dropdown';
+export { Tabs } from './Tabs';
+export { Tooltip } from './Tooltip';
+export { Breadcrumb } from './Breadcrumb';
+export { PageHeader } from './PageHeader';
+export { Toolbar } from './Toolbar';
+export { EmptyState } from './EmptyState';
+export { ErrorState } from './ErrorState';
+export { Skeleton } from './Skeleton';
+export { Spinner } from './Spinner';
+export { Icon } from './Icon';
+export type { IconName } from './Icon';
+export { Avatar } from './Avatar';
+export { Pagination } from './Pagination';
+export { SegmentedControl } from './SegmentedControl';
