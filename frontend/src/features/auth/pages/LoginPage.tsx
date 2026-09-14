@@ -36,14 +36,13 @@ export default function LoginPage() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
         minHeight: '100vh',
         background: 'var(--color-bg)',
         padding: 'var(--space-4)',
       }}
     >
-      <div className="hs-card hs-card--raised" style={{ width: '100%', maxWidth: '24rem', padding: 'var(--space-8)' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="hs-card hs-card--raised" style={{ width: '100%', maxWidth: '24rem', padding: 'var(--space-8)' }}>
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--color-brand)' }}>
             Society Management
@@ -92,9 +91,10 @@ export default function LoginPage() {
             Sign In
           </Button>
         </form>
+        </div>
       </div>
 
-      <p style={{ marginTop: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+      <p style={{ textAlign: 'center', padding: 'var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
         Designed by:{' '}
         <a href="https://mk9.in" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-brand)', fontWeight: 'var(--weight-medium)' }}>
           MAMK

@@ -21,16 +21,14 @@ export function AppFooter({ version, className = '' }: AppFooterProps) {
         background: 'var(--color-surface)',
       }}
     >
-      <span>Housing Society Management</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-        <span>
-          Designed by:{' '}
-          <a href="https://mk9.in" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontWeight: 'var(--weight-medium)' }}>
-            MAMK
-          </a>
-        </span>
-        {version && <span>v{version}</span>}
-      </div>
+      <span style={{ flex: 1 }}>Housing Society Management</span>
+      <span style={{ flex: 1, textAlign: 'center' }}>
+        Designed by:{' '}
+        <a href="https://mk9.in" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontWeight: 'var(--weight-medium)' }}>
+          MAMK
+        </a>
+      </span>
+      <span style={{ flex: 1, textAlign: 'right' }}>{version ? `v${version}` : ''}</span>
     </footer>
   );
 }
