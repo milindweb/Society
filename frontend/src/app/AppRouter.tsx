@@ -3,6 +3,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
+import { AppLayout } from './AppLayout';
 import { Forbidden } from './Forbidden';
 import { NotFound } from './NotFound';
 import { Spinner } from '@/components/ui/Spinner';
@@ -102,8 +103,9 @@ export function AppRouter() {
         <Route path="/auth/login" element={<LoginPage />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
 
           {/* Members & Flats */}
           <Route path="/flats" element={<FlatListPage />} />
@@ -182,6 +184,7 @@ export function AppRouter() {
           <Route path="/settings/audit/:auditId" element={<AuditDetailPage />} />
 
           <Route path="/forbidden" element={<Forbidden />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />
