@@ -14,14 +14,25 @@ beforeEach(() => {
 describe('authService', () => {
   describe('login', () => {
     it('calls apiClient with auth.login action and credentials', async () => {
-      const result = { token: 't', expiresAt: '2026-01-01', user: { id: 'u1' }, config: { isConfigured: true } };
+      const result = { token: 't', expiresAt: '2026-01-01', user: { id: 'u1' }, permissions: ['dashboard.read'], config: { isConfigured: true } };
       mockApiClient.mockResolvedValue(result);
       const res = await login('admin', 'pass123');
       expect(mockApiClient).toHaveBeenCalledWith({
         action: 'auth.login',
         payload: { username: 'admin', password: 'pass123', clientRequestId: 'test-client-id' },
       });
-      expect(res).toEqual(result);
+      expect(res).toEqual({
+        token: 't',
+        expiresAt: '2026-01-01',
+        user: { id: 'u1', permissions: ['dashboard.read'] },
+        config: { isConfigured: true },
+      });
+    });
+
+    it('defaults permissions to empty array when missing', async () => {
+      mockApiClient.mockResolvedValue({ token: 't', user: { id: 'u1' } });
+      const res = await login('admin', 'pass123');
+      expect(res.user.permissions).toEqual([]);
     });
 
     it('propagates apiClient errors', async () => {
@@ -32,11 +43,10 @@ describe('authService', () => {
 
   describe('me', () => {
     it('calls apiClient with auth.me action', async () => {
-      const user = { id: 'u1', name: 'Admin' };
-      mockApiClient.mockResolvedValue(user);
+      mockApiClient.mockResolvedValue({ user: { id: 'u1', name: 'Admin' }, roleKeys: ['admin'], permissions: ['dashboard.read'] });
       const res = await me();
       expect(mockApiClient).toHaveBeenCalledWith({ action: 'auth.me' });
-      expect(res).toEqual(user);
+      expect(res).toEqual({ id: 'u1', name: 'Admin', permissions: ['dashboard.read'] });
     });
   });
 

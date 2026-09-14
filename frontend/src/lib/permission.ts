@@ -1,6 +1,7 @@
 /* permission.ts — Permission checking helpers (design.md §5 — nav derived from permissions) */
 
 export function hasPermission(userPermissions: string[], required: string): boolean {
+  if (!Array.isArray(userPermissions)) return false;
   if (userPermissions.includes('*')) return true;
   return userPermissions.includes(required);
 }

@@ -42,7 +42,8 @@ export function AppLayout() {
 
   useEffect(() => {
     if (authStore.user) {
-      navStore.init(authStore.user.permissions);
+      const permissions = Array.isArray(authStore.user.permissions) ? authStore.user.permissions : [];
+      navStore.init(permissions);
       setItems(getNavSnapshot());
     }
 
@@ -52,6 +53,18 @@ export function AppLayout() {
       configStore.clear();
       navigate('/auth/login', { replace: true });
     });
+
+    // Refresh the profile to get authoritative permissions (auth.me returns them).
+    import('@/services/authService')
+      .then(({ me }) => me())
+      .then((freshUser) => {
+        if (authStore.token) {
+          authStore.setAuth(authStore.token, freshUser);
+          navStore.init(freshUser.permissions ?? []);
+          setItems(getNavSnapshot());
+        }
+      })
+      .catch(() => {});
 
     getConfig().then((c) => configStore.setConfig(c)).catch(() => {});
     getEnums().then((e) => configStore.setEnums(e)).catch(() => {});

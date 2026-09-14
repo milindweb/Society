@@ -6,20 +6,34 @@ import type { User } from '@/types/domain';
 
 interface LoginResult {
   token: string;
-  expiresAt: string;
+  expiresAt?: string;
   user: User;
-  config: { isConfigured: boolean };
+  config?: { isConfigured: boolean };
+}
+
+interface AuthUserResponse {
+  user: User;
+  roleKeys: string[];
+  permissions: string[];
 }
 
 export async function login(username: string, password: string): Promise<LoginResult> {
-  return apiClient<LoginResult>({
+  const data = await apiClient<AuthUserResponse & { token: string; expiresAt?: string; config?: { isConfigured: boolean } }>({
     action: 'auth.login',
     payload: { username, password, clientRequestId: generateClientId() },
   });
+
+  return {
+    token: data.token,
+    expiresAt: data.expiresAt,
+    user: { ...data.user, permissions: data.permissions ?? [] },
+    config: data.config,
+  };
 }
 
 export async function me(): Promise<User> {
-  return apiClient<User>({ action: 'auth.me' });
+  const data = await apiClient<AuthUserResponse>({ action: 'auth.me' });
+  return { ...data.user, permissions: data.permissions ?? [] };
 }
 
 export async function logout(): Promise<{ loggedOut: true }> {

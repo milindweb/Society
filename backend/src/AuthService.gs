@@ -5,7 +5,7 @@
  * - Tokens: 32 random bytes, base64url, opaque; only tokenHash (SHA-256) stored in Sessions.
  * - Passwords: salted iterated SHA-256 (SHA256-ITER-<n>, default 10000) + constant-time compare.
  * - Rate limiting per ipHash + username; lockout after LOGIN_MAX_ATTEMPTS for LOGIN_LOCK_MINUTES.
- * - Password policy: min length 8, not equal to username/email, mustChangePassword enforced.
+ * - Password policy: min length 4, not equal to username/email, mustChangePassword enforced.
  * - Session re-validated inside the write lock for state-changing actions.
  * - No hardcoded roles/permissions — all rows in the Auth spreadsheet.
  * - Auth_Audit written for every login success/failure/lock/logout.
@@ -15,7 +15,7 @@ var AuthService = (function () {
 
   // --------------------------------------------------------------------------- Constants
 
-  var MIN_PASSWORD_LENGTH = 8;
+  var MIN_PASSWORD_LENGTH = 4;
   var TOKEN_BYTE_LENGTH = 32;
   var SESSION_TTL_SECONDS = 720 * 60; // TOKEN_TTL_MINUTES default * 60
 
