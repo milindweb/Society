@@ -45,6 +45,7 @@ import { formatDateTime } from '@/lib/dates';
 import { authStore } from '@/state/authStore';
 import * as userService from '@/services/userService';
 import type { UserRow } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 /** Mirrors `AuthService.gs:18` so the hint is honest before a round trip. The
  * server validates independently and its message always wins. */
@@ -183,17 +184,20 @@ export default function UsersPage() {
         title="Users"
         subtitle="Accounts and role assignment"
         actions={
-          <Button
-            variant="primary"
-            icon={<Icon name="plus" size={16} />}
-            disabled={rolesLoading || roles.length === 0}
-            onClick={() => {
-              mutations.clearError();
-              setCreating(true);
-            }}
-          >
-            Add user
-          </Button>
+          <>
+            <ExportButton columns={columns} data={list.users} filename="users-list" />
+            <Button
+              variant="primary"
+              icon={<Icon name="plus" size={16} />}
+              disabled={rolesLoading || roles.length === 0}
+              onClick={() => {
+                mutations.clearError();
+                setCreating(true);
+              }}
+            >
+              Add user
+            </Button>
+          </>
         }
       />
 

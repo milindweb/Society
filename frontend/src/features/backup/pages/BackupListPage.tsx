@@ -15,6 +15,7 @@ import { useBackupList } from '../hooks/useBackup';
 import { formatDateTime } from '@/lib/dates';
 import { formatEnumKey, formatFileSize, truncate } from '@/lib/format';
 import type { Backup } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 /** `sheetRowCountsJson` is a JSON string of `{ sheetName: rowCount }` and is the
  *  ONLY place the per-sheet totals live — the `Backups` sheet has no `rowCount`
@@ -80,6 +81,7 @@ export default function BackupListPage() {
         subtitle="Backup history and creation"
         actions={
           <>
+            <ExportButton columns={columns} data={backups} filename="backups-list" />
             <Button variant="ghost" onClick={() => navigate('/settings/backup/archived')}>
               Archived records
             </Button>

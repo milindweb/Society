@@ -14,6 +14,7 @@ import { Alert } from '@/components/ui/Alert';
 import { useAuditList } from '../hooks/useAudit';
 import { formatDateTime } from '@/lib/dates';
 import type { AuditEntry } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 const mono = { fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' } as const;
 
@@ -82,7 +83,11 @@ export default function AuditListPage() {
 
   return (
     <div>
-      <PageHeader title="Audit Trail" subtitle="Track who changed what and when" />
+      <PageHeader
+        title="Audit Trail"
+        subtitle="Track who changed what and when"
+        actions={<ExportButton columns={columns} data={entries} filename="audit-trail" />}
+      />
 
       <Card style={{ marginBottom: 'var(--space-4)' }}>
         <CardBody>

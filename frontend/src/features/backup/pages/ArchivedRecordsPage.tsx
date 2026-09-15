@@ -11,6 +11,7 @@ import { Alert } from '@/components/ui/Alert';
 import { useArchiveList, useArchivableEntities } from '../hooks/useArchive';
 import { formatDateTime } from '@/lib/dates';
 import type { ArchiveEntry } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 /** Columns mirror the real `Archive_Index` sheet (`Schema.gs:290`):
  *  `archiveIndexId`, `entity` (source sheet), `archiveSheet`, `originalId`,
@@ -48,7 +49,11 @@ export default function ArchivedRecordsPage() {
 
   return (
     <div>
-      <PageHeader title="Archived Records" subtitle="Records copied into archive sheets" />
+      <PageHeader
+        title="Archived Records"
+        subtitle="Records copied into archive sheets"
+        actions={<ExportButton columns={columns} data={archives} filename="archived-records" />}
+      />
 
       <Card>
         <CardBody>

@@ -26,6 +26,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { PermissionGate } from '@/app/PermissionGate';
 import { usePeriods } from '../hooks/usePeriods';
 import type { BillingPeriod } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 export default function PeriodListPage() {
   const { periods, page, loading, error, busyPeriodKey, setPage, reload, ensurePeriod, lock, unlock } =
@@ -167,22 +168,25 @@ export default function PeriodListPage() {
         title="Billing Periods"
         subtitle="Create, lock and unlock the periods that demands are raised against"
         actions={
-          <PermissionGate permission="maintenance.generate">
-            <Button
-              icon={<Icon name="plus" size={16} />}
-              onClick={() => {
-                setCreateOpen(true);
-                setFormError(null);
-                // Default to the current month; the user can change it.
-                const now = new Date();
-                setNewPeriodKey(
-                  `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`,
-                );
-              }}
-            >
-              New Period
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={periods} filename="billing-periods" />
+            <PermissionGate permission="maintenance.generate">
+              <Button
+                icon={<Icon name="plus" size={16} />}
+                onClick={() => {
+                  setCreateOpen(true);
+                  setFormError(null);
+                  // Default to the current month; the user can change it.
+                  const now = new Date();
+                  setNewPeriodKey(
+                    `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`,
+                  );
+                }}
+              >
+                New Period
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

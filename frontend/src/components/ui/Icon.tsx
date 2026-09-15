@@ -1,6 +1,6 @@
 /* Icon.tsx — inline SVG registry (design.md §63 — no icon dependency) */
 
-import { type SVGProps } from 'react';
+import { memo, type SVGProps } from 'react';
 
 export type IconName =
   | 'dashboard'
@@ -108,7 +108,7 @@ const paths: Record<IconName, string> = {
   theme: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
 };
 
-export function Icon({ name, size = 20, ...props }: IconProps) {
+export const Icon = memo(function Icon({ name, size = 20, ...props }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -126,4 +126,4 @@ export function Icon({ name, size = 20, ...props }: IconProps) {
       <path d={paths[name]} />
     </svg>
   );
-}
+});

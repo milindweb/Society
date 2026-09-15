@@ -21,6 +21,7 @@ import { useDemandList } from '../hooks/useDemands';
 import { usePeriods } from '../hooks/usePeriods';
 import { useStatusOptions } from '@/features/flats/hooks/useLookups';
 import type { Demand } from '@/types/domain';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 export default function DemandListPage() {
   const navigate = useNavigate();
@@ -103,6 +104,7 @@ export default function DemandListPage() {
         subtitle="Monthly maintenance demands raised against flats"
         actions={
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <ExportButton columns={columns} data={demands} filename="demands-list" />
             <Button
               variant="secondary"
               icon={<Icon name="refresh" size={16} />}

@@ -31,6 +31,7 @@ import {
 } from '../hooks/useComplaintLookups';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Complaint } from '@/types/domain';
 
 export default function ComplaintListPage() {
@@ -157,9 +158,12 @@ export default function ComplaintListPage() {
         title="Complaints"
         subtitle="Raise → Assign → Corrective action → Resolve → Close"
         actions={
-          <PermissionGate permission="complaints.write">
-            <Button onClick={() => setRaising(true)}>Raise complaint</Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={complaints} filename="complaints-list" />
+            <PermissionGate permission="complaints.write">
+              <Button onClick={() => setRaising(true)}>Raise complaint</Button>
+            </PermissionGate>
+          </>
         }
       />
 

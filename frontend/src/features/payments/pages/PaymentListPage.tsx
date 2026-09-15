@@ -22,6 +22,7 @@ import { useEnumOptions } from '@/features/flats/hooks/useLookups';
 import { useFlatOptions } from '@/features/members/hooks/useFlatOptions';
 import { formatDate } from '@/lib/dates';
 import { formatEnumKey } from '@/lib/format';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Payment } from '@/types/domain';
 
 export default function PaymentListPage() {
@@ -77,6 +78,7 @@ export default function PaymentListPage() {
         subtitle="Recorded payments and their receipts"
         actions={
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <ExportButton columns={columns} data={payments} filename="payments-list" />
             <Button
               variant="secondary"
               icon={<Icon name="refresh" size={16} />}

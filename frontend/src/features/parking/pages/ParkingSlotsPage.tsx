@@ -33,6 +33,7 @@ import { FilterBar } from '@/components/data/FilterBar';
 import { useParkingSlots, useParkingSlotStatusOptions, useParkingTypeOptions } from '../hooks/useParkingLookups';
 import { useWingOptions } from '@/features/flats/hooks/useLookups';
 import { useDebounce } from '@/lib/useDebounce';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { ParkingSlot } from '@/types/domain';
 
 export default function ParkingSlotsPage() {
@@ -173,13 +174,16 @@ export default function ParkingSlotsPage() {
         title="Parking slots"
         subtitle="The slot master — configured in Settings, updated automatically as slots are allocated"
         actions={
-          <Button
-            variant="secondary"
-            icon={<Icon name="parking" size={16} />}
-            onClick={() => navigate('/parking/allocations')}
-          >
-            Allocations
-          </Button>
+          <>
+            <ExportButton columns={columns} data={visible} filename="parking-slots" />
+            <Button
+              variant="secondary"
+              icon={<Icon name="parking" size={16} />}
+              onClick={() => navigate('/parking/allocations')}
+            >
+              Allocations
+            </Button>
+          </>
         }
       />
 

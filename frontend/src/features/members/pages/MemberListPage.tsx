@@ -20,6 +20,7 @@ import { useMemberList } from '../hooks/useMembers';
 import { useEnumOptions, useStatusOptions } from '@/features/flats/hooks/useLookups';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatEnumKey } from '@/lib/format';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Member } from '@/types/domain';
 
 export default function MemberListPage() {
@@ -78,11 +79,14 @@ export default function MemberListPage() {
         title="Members"
         subtitle="Manage society members"
         actions={
-          <PermissionGate permission="members.create">
-            <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/members/new')}>
-              Add Member
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={members} filename="members-list" />
+            <PermissionGate permission="members.create">
+              <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/members/new')}>
+                Add Member
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

@@ -5,6 +5,7 @@
  * design.md §5: sections and quick actions are permission-derived, never a hardcoded role list.
  * Layering (frontend-architecture.md §1): page composes; useDashboard owns the fetch. */
 
+import { lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -16,11 +17,12 @@ import { AmountText } from '@/components/data/AmountText';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PermissionGate } from '@/app/PermissionGate';
 import { KpiRow } from '../components/KpiRow';
-import { DashboardCharts } from '../components/DashboardCharts';
 import { RecentTable } from '../components/RecentTable';
 import { useDashboard } from '../hooks/useDashboard';
 import { formatDate } from '@/lib/dates';
 import type { Payment, Complaint, Notice, Visitor } from '@/types/domain';
+
+const DashboardCharts = lazy(() => import('../components/DashboardCharts'));
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -95,7 +97,9 @@ export default function DashboardPage() {
 
       <KpiRow summary={summary} loading={loading} />
 
-      <DashboardCharts summary={summary} loading={loading} />
+      <Suspense>
+        <DashboardCharts summary={summary} loading={loading} />
+      </Suspense>
 
       {quickActions.length > 0 && (
         <Card style={{ marginBottom: 'var(--space-5)' }}>

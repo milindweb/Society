@@ -33,7 +33,7 @@ function formatMonth(month: string): string {
   return date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
 }
 
-export function DashboardCharts({ summary, loading }: DashboardChartsProps) {
+export default function DashboardCharts({ summary, loading }: DashboardChartsProps) {
   const [monthCount, setMonthCount] = useState('6');
 
   const chartData = useMemo(() => {

@@ -51,6 +51,7 @@ import { useSalaryList, usePrepareSalary } from '../hooks/useSalary';
 import { useSalaryStatusOptions, usePeriodOptions } from '../hooks/useSalaryLookups';
 import { useEmployeeOptions } from '@/features/employees/hooks/useEmployees';
 import { canEditSalary, canApproveSalary, canPaySalary } from '@/services/employeeService';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { EmployeeSalary } from '@/types/domain';
 
 export default function SalaryPage() {
@@ -230,15 +231,18 @@ export default function SalaryPage() {
         title="Salary"
         subtitle="Monthly staff salary — prepared from attendance, then approved and paid"
         actions={
-          <PermissionGate permission="salary.write">
-            <Button
-              icon={<Icon name="plus" size={16} />}
-              onClick={() => setPreparing(true)}
-              disabled={!periodKey}
-            >
-              Prepare salary
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={salaries} filename="salary-list" />
+            <PermissionGate permission="salary.write">
+              <Button
+                icon={<Icon name="plus" size={16} />}
+                onClick={() => setPreparing(true)}
+                disabled={!periodKey}
+              >
+                Prepare salary
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

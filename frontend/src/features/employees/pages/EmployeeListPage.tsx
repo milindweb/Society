@@ -33,6 +33,7 @@ import { AmountText } from '@/components/data/AmountText';
 import { useEmployeeList } from '../hooks/useEmployees';
 import { useEmployeeTypeOptions, useEmployeeStatusOptions } from '../hooks/useEmployeeLookups';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Employee } from '@/types/domain';
 
 export default function EmployeeListPage() {
@@ -166,11 +167,14 @@ export default function EmployeeListPage() {
         title="Employees"
         subtitle="Society staff — security, housekeeping, maintenance and office"
         actions={
-          <PermissionGate permission="employees.write">
-            <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/employees/new')}>
-              Add employee
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={employees} filename="employees-list" />
+            <PermissionGate permission="employees.write">
+              <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/employees/new')}>
+                Add employee
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

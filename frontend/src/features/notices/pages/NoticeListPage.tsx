@@ -34,6 +34,7 @@ import { useNoticeTypeOptions, useAudienceTypeOptions } from '../hooks/useNotice
 import { useDebounce } from '@/lib/useDebounce';
 import { formatDate } from '@/lib/dates';
 import { isTrueFlag } from '@/services/noticeService';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Notice } from '@/types/domain';
 
 /** The published/draft toggle maps onto the server's `isPublished` filter. */
@@ -159,11 +160,14 @@ export default function NoticeListPage() {
         title="Notices"
         subtitle="Society notices, circulars and announcements"
         actions={
-          <PermissionGate permission="notices.write">
-            <Button icon={<Icon name="plus" size={16} />} onClick={() => setCreating(true)}>
-              New notice
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={notices} filename="notices-list" />
+            <PermissionGate permission="notices.write">
+              <Button icon={<Icon name="plus" size={16} />} onClick={() => setCreating(true)}>
+                New notice
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

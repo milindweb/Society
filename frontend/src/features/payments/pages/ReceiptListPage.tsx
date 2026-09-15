@@ -19,6 +19,7 @@ import { useReceiptList } from '../hooks/useReceipts';
 import { useFlatOptions } from '@/features/members/hooks/useFlatOptions';
 import { usePeriods } from '@/features/maintenance/hooks/usePeriods';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Receipt } from '@/types/domain';
 
 export default function ReceiptListPage() {
@@ -91,13 +92,16 @@ export default function ReceiptListPage() {
         title="Receipts"
         subtitle="Receipts issued for recorded payments"
         actions={
-          <Button
-            variant="secondary"
-            icon={<Icon name="refresh" size={16} />}
-            onClick={() => void reload()}
-          >
-            Refresh
-          </Button>
+          <>
+            <ExportButton columns={columns} data={receipts} filename="receipts-list" />
+            <Button
+              variant="secondary"
+              icon={<Icon name="refresh" size={16} />}
+              onClick={() => void reload()}
+            >
+              Refresh
+            </Button>
+          </>
         }
       />
 

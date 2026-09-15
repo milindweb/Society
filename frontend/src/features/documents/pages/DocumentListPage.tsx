@@ -42,6 +42,7 @@ import {
 import { parseFileRef } from '@/services/documentService';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Document } from '@/types/domain';
 
 export default function DocumentListPage() {
@@ -220,8 +221,9 @@ export default function DocumentListPage() {
         title="Documents"
         subtitle="One central repository for every society document"
         actions={
-          <PermissionGate permission="documents.write">
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <ExportButton columns={columns} data={visible} filename="documents-list" />
+            <PermissionGate permission="documents.write">
               <Button
                 variant="secondary"
                 onClick={() => navigate('/documents/new')}
@@ -235,8 +237,8 @@ export default function DocumentListPage() {
               >
                 Upload
               </Button>
-            </div>
-          </PermissionGate>
+            </PermissionGate>
+          </div>
         }
       />
 

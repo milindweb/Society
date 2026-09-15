@@ -38,6 +38,7 @@ import { useMeetingList } from '../hooks/useMeetings';
 import { useMeetingTypeOptions, useMeetingStatusOptions } from '../hooks/useMeetingLookups';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Meeting } from '@/types/domain';
 
 /** '12' → '12' ; '' / undefined / non-numeric → '—'.
@@ -169,11 +170,14 @@ export default function MeetingListPage() {
         title="Meetings"
         subtitle="AGM, SGM and committee meetings with agenda, minutes and attendance"
         actions={
-          <PermissionGate permission="meetings.write">
-            <Button icon={<Icon name="plus" size={16} />} onClick={() => setCreating(true)}>
-              New meeting
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={meetings} filename="meetings-list" />
+            <PermissionGate permission="meetings.write">
+              <Button icon={<Icon name="plus" size={16} />} onClick={() => setCreating(true)}>
+                New meeting
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

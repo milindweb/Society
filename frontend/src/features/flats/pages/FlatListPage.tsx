@@ -20,6 +20,7 @@ import { PermissionGate } from '@/app/PermissionGate';
 import { useFlatList } from '../hooks/useFlats';
 import { useWingOptions, useStatusOptions } from '../hooks/useLookups';
 import { useDebounce } from '@/lib/useDebounce';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Flat } from '@/types/domain';
 
 export default function FlatListPage() {
@@ -72,11 +73,14 @@ export default function FlatListPage() {
         title="Flats"
         subtitle="Manage flat/unit master data"
         actions={
-          <PermissionGate permission="flats.create">
-            <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/flats/new')}>
-              Add Flat
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={flats} filename="flats-list" />
+            <PermissionGate permission="flats.create">
+              <Button icon={<Icon name="plus" size={16} />} onClick={() => navigate('/flats/new')}>
+                Add Flat
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 

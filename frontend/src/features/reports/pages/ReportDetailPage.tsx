@@ -44,6 +44,7 @@ import { DataListMobile } from '@/components/data/DataListMobile';
 import { FilterBar } from '@/components/data/FilterBar';
 import { PaginationBar } from '@/components/data/PaginationBar';
 import { AmountText } from '@/components/data/AmountText';
+import { ExportButton } from '@/components/ui/ExportButton';
 import { labelFromKey, isMoneyColumn, isStatusColumn, isDateColumn, hasNoTotals, describeTotals } from '@/services/reportService';
 import type { ReportFilters } from '@/services/reportService';
 import { useReportCatalog, useReport } from '../hooks/useReports';
@@ -176,6 +177,9 @@ export default function ReportDetailPage() {
         breadcrumbs={<Breadcrumb items={[{ label: 'Reports', onClick: () => navigate('/reports') }]} />}
         actions={
           <>
+            {result?.rows && result.rows.length > 0 && (
+              <ExportButton columns={columns} data={result.rows} filename={`${reportKey}-report`} />
+            )}
             <Button variant="secondary" onClick={reload} disabled={loading}>
               <Icon name="refresh" size={16} />
               Refresh

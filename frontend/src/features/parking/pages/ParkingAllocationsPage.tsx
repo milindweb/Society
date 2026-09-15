@@ -41,6 +41,7 @@ import { useAllocationList, useParkingSummary, useAllocation } from '../hooks/us
 import { useParkingSlotOptions, useAllocationStatusOptions } from '../hooks/useParkingLookups';
 import { canEndAllocation } from '@/services/parkingService';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { ParkingAllocation } from '@/types/domain';
 
 export default function ParkingAllocationsPage() {
@@ -217,20 +218,23 @@ export default function ParkingAllocationsPage() {
         subtitle="Who is parked where — permanent and temporary"
         breadcrumbs={undefined}
         actions={
-          <PermissionGate permission="parking.write">
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button
-                variant="secondary"
-                icon={<Icon name="parking" size={16} />}
-                onClick={() => navigate('/parking/slots')}
-              >
-                Slots
-              </Button>
-              <Button icon={<Icon name="plus" size={16} />} onClick={() => setAllocating(true)}>
-                Allocate a slot
-              </Button>
-            </div>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={allocations} filename="parking-allocations" />
+            <PermissionGate permission="parking.write">
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <Button
+                  variant="secondary"
+                  icon={<Icon name="parking" size={16} />}
+                  onClick={() => navigate('/parking/slots')}
+                >
+                  Slots
+                </Button>
+                <Button icon={<Icon name="plus" size={16} />} onClick={() => setAllocating(true)}>
+                  Allocate a slot
+                </Button>
+              </div>
+            </PermissionGate>
+          </>
         }
       />
 

@@ -50,6 +50,7 @@ import {
 } from '../hooks/useExpenseLookups';
 import { formatMoney } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Expense } from '@/types/domain';
 
 export default function ExpenseListPage() {
@@ -235,6 +236,7 @@ export default function ExpenseListPage() {
         subtitle="What the society spent — recorded against a category and a payment mode"
         actions={
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            <ExportButton columns={columns} data={expenses} filename="expenses-list" />
             <Button
               variant="secondary"
               icon={<Icon name="reports" size={16} />}

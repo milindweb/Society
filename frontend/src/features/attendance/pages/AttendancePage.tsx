@@ -55,6 +55,7 @@ import { useEmployeeOptions } from '@/features/employees/hooks/useEmployees';
 import { useAttendanceList, useAttendanceSummary, useMarkAttendance } from '../hooks/useAttendance';
 import { useAttendanceStatusOptions } from '../hooks/useAttendanceLookups';
 import { formatDate } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { EmployeeAttendance } from '@/types/domain';
 
 /** Today in UTC as `YYYY-MM-DD`.
@@ -353,13 +354,16 @@ export default function AttendancePage() {
         title="Attendance"
         subtitle="Daily staff attendance — the days that feed the salary run"
         actions={
-          <Button
-            variant="secondary"
-            icon={<Icon name="employees" size={16} />}
-            onClick={() => navigate('/employees')}
-          >
-            Employees
-          </Button>
+          <>
+            <ExportButton columns={recordColumns} data={records.rows} filename="attendance-records" />
+            <Button
+              variant="secondary"
+              icon={<Icon name="employees" size={16} />}
+              onClick={() => navigate('/employees')}
+            >
+              Employees
+            </Button>
+          </>
         }
       />
 

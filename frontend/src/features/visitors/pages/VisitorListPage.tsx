@@ -34,6 +34,7 @@ import { useVisitorList, useVisitorSummary } from '../hooks/useVisitors';
 import { useVisitorTypeOptions, useVisitorStatusOptions } from '../hooks/useVisitorLookups';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatDateTime } from '@/lib/dates';
+import { ExportButton } from '@/components/ui/ExportButton';
 import type { Visitor } from '@/types/domain';
 
 export default function VisitorListPage() {
@@ -217,14 +218,17 @@ export default function VisitorListPage() {
         title="Visitors"
         subtitle="Gate movements and visitor history"
         actions={
-          <PermissionGate permission="visitors.write">
-            <Button
-              icon={<Icon name="plus" size={16} />}
-              onClick={() => navigate('/visitors/new')}
-            >
-              Log visitor
-            </Button>
-          </PermissionGate>
+          <>
+            <ExportButton columns={columns} data={visitors} filename="visitors-list" />
+            <PermissionGate permission="visitors.write">
+              <Button
+                icon={<Icon name="plus" size={16} />}
+                onClick={() => navigate('/visitors/new')}
+              >
+                Log visitor
+              </Button>
+            </PermissionGate>
+          </>
         }
       />
 
