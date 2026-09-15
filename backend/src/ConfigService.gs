@@ -404,8 +404,12 @@ var ConfigService = (function () {
     // Only show ACTIVE rows by default (unless includeInactive is set)
     if (opts && !opts.includeInactive) {
       readOpts.filter = readOpts.filter || {};
-      // Master entities use 'status' column, not 'statusKey'
-      readOpts.filter.status = 'ACTIVE';
+      // Detect the correct status column: some sheets use 'status', others 'statusKey'
+      var columns = Schema.columnsOf(resolved.sheetName);
+      var statusCol = columns.indexOf('status') !== -1 ? 'status' : (columns.indexOf('statusKey') !== -1 ? 'statusKey' : null);
+      if (statusCol) {
+        readOpts.filter[statusCol] = 'ACTIVE';
+      }
     }
 
     return Repository.readSheet(resolved.sheetName, readOpts);
@@ -450,15 +454,11 @@ var ConfigService = (function () {
 
     // Set default status to ACTIVE for master entities
     var record = Object.assign({}, values);
-    if (!record.status && resolved.def.def && resolved.def.def.own && resolved.def.def.own.indexOf('status') !== -1) {
-      record.status = 'ACTIVE';
-    }
-    // For sheets with status column (most master entities)
-    if (!record.status) {
-      var sheetDef = Schema.get(resolved.sheetName);
-      if (sheetDef.own.indexOf('status') !== -1) {
-        record.status = 'ACTIVE';
-      }
+    // Detect the correct status column: some sheets use 'status', others 'statusKey'
+    var columns = Schema.columnsOf(resolved.sheetName);
+    var statusCol = columns.indexOf('status') !== -1 ? 'status' : (columns.indexOf('statusKey') !== -1 ? 'statusKey' : null);
+    if (statusCol && !record[statusCol]) {
+      record[statusCol] = 'ACTIVE';
     }
 
     var created = Repository.withLock(function () {
@@ -639,7 +639,12 @@ var ConfigService = (function () {
     }
 
     var updated = Repository.withLock(function () {
-      return Repository.updateById(resolved.sheetName, idValue, { status: newStatus }, actor);
+      // Detect the correct status column: some sheets use 'status', others 'statusKey'
+      var columns = Schema.columnsOf(resolved.sheetName);
+      var statusCol = columns.indexOf('status') !== -1 ? 'status' : (columns.indexOf('statusKey') !== -1 ? 'statusKey' : 'status');
+      var update = {};
+      update[statusCol] = newStatus;
+      return Repository.updateById(resolved.sheetName, idValue, update, actor);
     }, 'config:entity:setStatus:' + entityKey);
 
     invalidateConfigCache();

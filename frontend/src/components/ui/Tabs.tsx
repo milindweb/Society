@@ -1,6 +1,6 @@
 /* Tabs.tsx — design.md §87 */
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 interface Tab {
   key: string;
@@ -27,11 +27,21 @@ interface TabsProps {
 
 export function Tabs({ tabs, defaultKey, selectedKey, className = '', onChange }: TabsProps) {
   const [active, setActive] = useState(selectedKey ?? defaultKey ?? tabs[0]?.key ?? '');
+  const tabListRef = useRef<HTMLDivElement>(null);
 
   /* Follow an external selection change (a route parameter, typically). */
   useEffect(() => {
     if (selectedKey !== undefined) { setActive(selectedKey); }
   }, [selectedKey]);
+
+  /* Auto-scroll the active tab into view within the scrollable tab bar. */
+  useEffect(() => {
+    if (!tabListRef.current) return;
+    const activeBtn = tabListRef.current.querySelector('[aria-selected="true"]');
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [active]);
 
   const handleChange = (key: string) => {
     setActive(key);
@@ -40,7 +50,7 @@ export function Tabs({ tabs, defaultKey, selectedKey, className = '', onChange }
 
   return (
     <div className={className}>
-      <div className="hs-tabs" role="tablist">
+      <div className="hs-tabs" role="tablist" ref={tabListRef}>
         {tabs.map((tab) => (
           <button
             key={tab.key}

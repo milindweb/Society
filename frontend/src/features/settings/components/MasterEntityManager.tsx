@@ -132,7 +132,8 @@ export function MasterEntityManager({ meta, catalog, canWrite }: MasterEntityMan
       key: 'status',
       header: 'Status',
       render: (row: Row) => {
-        const active = String(row.status ?? 'ACTIVE').toUpperCase() !== 'INACTIVE';
+        const statusVal = String(row.status ?? row.statusKey ?? 'ACTIVE').toUpperCase();
+        const active = statusVal !== 'INACTIVE';
         return <Badge variant={active ? 'success' : 'neutral'}>{active ? 'Active' : 'Inactive'}</Badge>;
       },
     };
@@ -355,7 +356,8 @@ function renderCell(
 }
 
 function isActive(row: Row): boolean {
-  return String(row.status ?? 'ACTIVE').toUpperCase() !== 'INACTIVE';
+  const statusVal = String(row.status ?? row.statusKey ?? 'ACTIVE').toUpperCase();
+  return statusVal !== 'INACTIVE';
 }
 
 /** Crude singularisation for button and dialog copy ("Wings" → "Wing").

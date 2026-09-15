@@ -468,9 +468,15 @@
 /* ── Tabs ── */
 .hs-tabs {
   display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-bottom: 1px solid var(--color-border);
   gap: 0;
+  scrollbar-width: thin;
 }
+.hs-tabs::-webkit-scrollbar { height: 4px; }
+.hs-tabs::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 .hs-tabs__tab {
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
@@ -480,6 +486,8 @@
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color var(--motion-fast), border-color var(--motion-fast);
 }
 .hs-tabs__tab:hover { color: var(--color-text); }
