@@ -220,6 +220,85 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
 }
+/* A whole card that acts as a row link / button. */
+.hs-card--clickable {
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+.hs-card--clickable:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ── Table (DESIGN-General.md §49–§52) ──
+   FE-15: `.hs-table` was referenced by `components/data/DataTable.tsx` but never
+   defined anywhere in `styles/`, so every list page rendered an unstyled
+   browser-default table. Semantic tokens only (DESIGN-General.md §90). */
+.hs-table-wrap {
+  padding: 0;
+  overflow: hidden;
+}
+.hs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+}
+.hs-table th,
+.hs-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: middle;
+}
+/* Header carries stronger hierarchy than body rows (§50). */
+.hs-table th {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+.hs-table td {
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+.hs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.hs-table tbody tr:hover {
+  background: var(--color-surface-hover);
+}
+/* Numeric / monospace columns stay legible in both themes. */
+.hs-table td .hs-mono {
+  font-size: var(--text-sm);
+}
+/* Sort control: a real button so it is keyboard reachable (§51 / design.md §7). */
+.hs-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+.hs-table__sort:hover {
+  color: var(--color-brand);
+}
+.hs-table__row--clickable {
+  cursor: pointer;
+}
+.hs-table__row--clickable:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
 
 /* ── Badge ── */
 .hs-badge {
@@ -297,6 +376,57 @@
   gap: var(--space-2);
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
+}
+
+/* ── Drawer ──
+   FE-15: the panel was styled inline, and its `animation: hs-slide-*` referenced
+   keyframes that were never defined anywhere, so the drawer had no entry motion
+   at all. Geometry is unchanged; it now lives here so media queries and the
+   `prefers-reduced-motion` guard in base.css can reach it. */
+.hs-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 16rem;
+  max-width: 85vw;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-drawer);
+}
+.hs-drawer--left {
+  left: 0;
+  border-right: 1px solid var(--color-border);
+  animation: hs-slide-left var(--motion-normal) var(--ease-standard);
+}
+.hs-drawer--right {
+  right: 0;
+  border-left: 1px solid var(--color-border);
+  animation: hs-slide-right var(--motion-normal) var(--ease-standard);
+}
+.hs-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.hs-drawer__title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.hs-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+}
+@keyframes hs-slide-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes hs-slide-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 
 /* ── Toast ── */
@@ -391,6 +521,24 @@
   transition: background var(--motion-fast);
 }
 .hs-dropdown__item:hover { background: var(--color-surface-hover); }
+.hs-dropdown__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* FE-15: the trigger is a real <button> (keyboard reachable), reset back to a
+   plain inline control so existing trigger markup renders unchanged. */
+.hs-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
 .hs-dropdown__divider {
   height: 1px;
   background: var(--color-border);
@@ -537,6 +685,20 @@
   gap: var(--space-2);
   flex-shrink: 0;
 }
+/* FE-15: at 360px a long title plus `flex-shrink: 0` actions could not both fit
+   on one row, so the action group pushed the page wider than the viewport.
+   Every page starts with a PageHeader (design.md §6), so this was the single
+   most common source of horizontal page scroll on mobile. */
+@media (max-width: 639px) {
+  .hs-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+  .hs-page-header__actions {
+    flex-wrap: wrap;
+  }
+}
 
 /* ── Toolbar ── */
 .hs-toolbar {
@@ -545,6 +707,17 @@
   gap: var(--space-3);
   margin-bottom: var(--space-4);
   flex-wrap: wrap;
+}
+
+/* Filter controls inside a toolbar/FilterBar get a bounded width so a row of
+   selects and inputs stays readable (design.md §6). */
+.hs-input--filter {
+  max-width: 12rem;
+}
+
+/* ── Description List ── */
+.hs-desc-list--two dt {
+  white-space: nowrap;
 }
 
 /* ── Form Field ── */
@@ -584,6 +757,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
+}
+/* FE-15: the "showing X–Y of Z" label and the page controls could not share a
+   row at 360px, which widened the page instead of wrapping. */
+@media (max-width: 639px) {
+  .hs-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
 }
 
 /* ── Kpi Card ── */
@@ -649,3 +831,106 @@
 .hs-avatar--sm { width: 1.75rem; height: 1.75rem; font-size: var(--text-xs); }
 .hs-avatar--md { width: 2.25rem; height: 2.25rem; font-size: var(--text-sm); }
 .hs-avatar--lg { width: 3rem; height: 3rem; font-size: var(--text-lg); }
+
+/* ── Timeline (design.md §6 — history/timeline pattern) ── */
+/* Used by the complaint detail page to render the append-only
+   Complaint_Updates history. A vertical rule links the markers so the
+   sequence reads top-to-bottom (oldest first, per the server's ordering). */
+.hs-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.hs-timeline__item {
+  position: relative;
+  padding: 0 0 var(--space-5) var(--space-6);
+}
+.hs-timeline__item:last-child {
+  padding-bottom: 0;
+}
+/* The connecting rule: drawn from each item's marker down to the next one. */
+.hs-timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.3125rem;
+  top: 0.875rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+.hs-timeline__marker {
+  position: absolute;
+  left: 0;
+  top: 0.3125rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-brand);
+}
+.hs-timeline__body {
+  min-width: 0;
+}
+
+/* ── Header brand ──
+   FE-15: the brand was the literal string "Society". It now renders the
+   configured society name (SRS §15), which can be arbitrarily long, so it is
+   truncated rather than allowed to push the header controls off-screen. */
+.hs-header__brand {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 639px) {
+  .hs-header__brand {
+    max-width: 40vw;
+  }
+}
+
+/* ── Logo (society crest / brand mark) ──
+   Rendered by `components/ui/Logo.tsx` from the generated crest in `public/`.
+   No plate or ring is needed: the crest is a navy disc on transparent corners,
+   so it reads correctly against both the light and the dark surface. */
+.hs-logo {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* ── Mobile bottom navigation (design.md §29) ──
+   FE-15: this component carried an inline `display: none` that no stylesheet
+   could override, so it could never render. Visibility lives here instead. */
+.hs-mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-sticky);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-1) 0;
+  justify-content: space-around;
+}
+.hs-mobile-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* Touch target (design.md §7: ≥ 40px on mobile controls). */
+  min-width: var(--control-h-lg);
+  min-height: var(--control-h-lg);
+  justify-content: center;
+  padding: var(--space-1);
+  border: none;
+  background: none;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+@media (max-width: 639px) {
+  .hs-mobile-nav {
+    display: flex;
+  }
+}

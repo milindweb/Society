@@ -84,6 +84,9 @@ var RbacService = (function () {
    * the user's own record (never from the request payload). If the caller tries to
    * access another member's data, return FORBIDDEN.
    *
+   * A caller who holds neither id is a staff account and is NOT narrowed — see the
+   * note inside the MEMBER_SELF branch.
+   *
    * @param {object} user        the authenticated user record from Users sheet
    * @param {object} target      the target entity to access
    * @param {object} [opts]      { scope: 'MEMBER_SELF' | 'GLOBAL' }
@@ -96,9 +99,18 @@ var RbacService = (function () {
     }
 
     if (scope === 'MEMBER_SELF') {
-      // The user must have memberId or flatId
+      /* A caller with NEITHER a flatId nor a memberId is a staff account
+       * (ADMIN, SECRETARY, CASHIER, ...). There is no "own" record to narrow to,
+       * so the route behaves as GLOBAL — the permission gate has already decided
+       * whether they may read the module.
+       *
+       * Returning FORBIDDEN here instead locked every staff role out of all 27
+       * MEMBER_SELF routes (members, demands, payments, receipts, ledger,
+       * complaints, visitors, notices, meetings, documents), because staff have
+       * no flat of their own. api-contract.md §5 is explicit that MEMBER_SELF
+       * *narrows* and that only a *differing* payload id is FORBIDDEN. */
       if (!user.memberId && !user.flatId) {
-        return { allowed: false, error: 'FORBIDDEN' };
+        return { allowed: true };
       }
 
       // Check if target flatId matches user's flatId

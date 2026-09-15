@@ -30,6 +30,13 @@
 .hs-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .hs-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .hs-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Full-row field inside a 2-column form grid (design.md §44). */
+.hs-col-span-2 { grid-column: span 2 / span 2; }
+@media (max-width: 1023px) {
+  /* Below the two-column breakpoint the grid is single-column, so spanning two
+     would overflow; collapse to a normal single-column item instead. */
+  .hs-col-span-2 { grid-column: auto; }
+}
 
 /* ── Spacing ── */
 .hs-m-0 { margin: 0; }
@@ -126,6 +133,10 @@
 }
 
 /* ── Responsive ── */
+/* `.hs-only-mobile` / `.hs-only-desktop` pair the table view with the card list:
+   a list page renders both and lets CSS pick one, so no resize listener is
+   needed. `.hs-only-desktop` additionally hides from tablet down, because the
+   mobile card list is the better affordance below 1024px. */
 @media (max-width: 639px) {
   .hs-sm-hidden { display: none !important; }
   .hs-sm-flex-col { flex-direction: column !important; }
@@ -135,6 +146,14 @@
   .hs-sm-text-center { text-align: center !important; }
 }
 
+@media (max-width: 1023px) {
+  .hs-only-desktop { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .hs-only-mobile { display: none !important; }
+}
+
 @media (min-width: 640px) and (max-width: 1023px) {
   .hs-md-hidden { display: none !important; }
   .hs-md-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
@@ -142,6 +161,7 @@
 
 @media (min-width: 1024px) {
   .hs-lg-hidden { display: none !important; }
+  .hs-lg-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .hs-lg-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
   .hs-lg-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 }

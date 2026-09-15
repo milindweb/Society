@@ -1,11 +1,23 @@
-/* LoginPage.tsx — FE-03 stub (will be fully implemented in FE-03) */
+/* LoginPage.tsx — FE-03 authentication UI (SRS §1) */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { FormField } from '@/components/ui/FormField';
+import { Logo } from '@/components/ui/Logo';
 import { authStore } from '@/state/authStore';
+
+/* The product's own title — not society data, which SRS §15 forbids hardcoding.
+ * It matches `<title>` in index.html.
+ *
+ * The society's real name is deliberately NOT shown here: `config.get` is
+ * `scope: 'GLOBAL'` in `Routes.gs`, and the router only skips authentication for
+ * `scope: 'PUBLIC'` (`ApiRouter.gs:170`) — which is `auth.health` and
+ * `auth.login` alone. A `permission: null` route still requires a token, so
+ * there is no way to read the society name before signing in. The shell shows it
+ * once config has loaded (`AppLayout` -> `AppHeader`). */
+const APP_TITLE = 'Society Management';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -44,8 +56,12 @@ export default function LoginPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="hs-card hs-card--raised" style={{ width: '100%', maxWidth: '24rem', padding: 'var(--space-8)' }}>
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+          {/* design.md §6: brand mark → auth surface → form → primary action. */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
+            <Logo size={72} />
+          </div>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--color-brand)' }}>
-            Society Management
+            {APP_TITLE}
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' }}>
             Sign in to your account

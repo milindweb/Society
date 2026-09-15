@@ -9,27 +9,27 @@ import { FormField } from '@/components/ui/FormField';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
+import { DescriptionList } from '@/components/ui/DescriptionList';
 import { useBackupCreate } from '../hooks/useBackup';
-
-const SCOPE_OPTIONS = [
-  { value: 'FULL', label: 'Full Backup — All data' },
-  { value: 'CONFIG', label: 'Config — Configuration only' },
-  { value: 'FINANCE', label: 'Finance — Payments, demands, ledger' },
-  { value: 'OPERATIONS', label: 'Operations — Complaints, visitors, meetings' },
-];
+import { useEnumOptions } from '@/lib/useConfigOptions';
+import { formatEnumKey } from '@/lib/format';
 
 export default function BackupCreatePage() {
   const navigate = useNavigate();
   const { create, created, loading, error } = useBackupCreate();
-  const [scope, setScope] = useState<string>('FULL');
+  /* Scopes come from `SchemaMeta.ENUM_OPTIONS.BACKUP_SCOPE` via config.enums —
+   * SRS §15 forbids hardcoding them, and the server validates against the same
+   * list (`BackupService.gs:87`). */
+  const { options: scopeOptions, loading: scopesLoading } = useEnumOptions('BACKUP_SCOPE');
+
+  const [scope, setScope] = useState('');
   const [notes, setNotes] = useState('');
+
+  const effectiveScope = scope || scopeOptions[0]?.value || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await create(scope, notes || undefined);
-    if (result) {
-      navigate('/settings/backup');
-    }
+    await create(effectiveScope, notes || undefined);
   };
 
   return (
@@ -43,14 +43,25 @@ export default function BackupCreatePage() {
 
             {created && (
               <Alert variant="success">
-                Backup created successfully. Checksum: {created.checksum}
+                <p style={{ marginBottom: 'var(--space-3)' }}>Backup created.</p>
+                <DescriptionList
+                  items={[
+                    { label: 'Backup ID', value: created.backupId },
+                    { label: 'Scope', value: formatEnumKey(created.scope) },
+                    { label: 'Rows', value: created.totalRows.toLocaleString() },
+                    { label: 'Sheets', value: String(created.sheets) },
+                    { label: 'Checksum', value: created.checksum },
+                  ]}
+                />
               </Alert>
             )}
 
             <FormField label="Backup Scope" required>
               <Select
-                options={SCOPE_OPTIONS}
-                value={scope}
+                aria-label="Backup scope"
+                options={scopeOptions}
+                value={effectiveScope}
+                disabled={scopesLoading || Boolean(created)}
                 onChange={(e) => setScope(e.target.value)}
               />
             </FormField>
@@ -60,17 +71,20 @@ export default function BackupCreatePage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g., Pre-migration backup"
+                disabled={Boolean(created)}
               />
             </FormField>
           </CardBody>
 
           <CardFooter>
             <Button type="button" variant="ghost" onClick={() => navigate('/settings/backup')}>
-              Cancel
+              {created ? 'Back to backups' : 'Cancel'}
             </Button>
-            <Button type="submit" loading={loading}>
-              Create Backup
-            </Button>
+            {!created && (
+              <Button type="submit" loading={loading} disabled={!effectiveScope}>
+                Create Backup
+              </Button>
+            )}
           </CardFooter>
         </form>
       </Card>

@@ -67,6 +67,11 @@ export function AppSidebar({ items, activeRoute, onNavigate, collapsed: controll
             <button
               key={item.key}
               onClick={() => onNavigate(item.route)}
+              /* The collapsed rail hides the label text, and `Icon` renders
+                 aria-hidden, so without this the button has no accessible name
+                 at all for a keyboard/screen-reader user (design.md §7). */
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',

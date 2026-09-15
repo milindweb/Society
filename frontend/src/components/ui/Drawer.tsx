@@ -1,7 +1,17 @@
-/* Drawer.tsx — design.md §87: mobile sidebar overlay */
+/* Drawer.tsx — design.md §87: mobile sidebar overlay
+ *
+ * FE-15: the drawer set `aria-modal="true"` but never received focus, never
+ * contained Tab and never restored focus — the mobile navigation could be opened
+ * by keyboard and then not driven by it. `useFocusTrap` handles all three.
+ *
+ * The panel styles were also inline, which meant the `--space-*` / `--radius-*`
+ * tokens could not be themed per breakpoint. They are unchanged in value; the
+ * geometry now lives in `.hs-drawer` in `components.css` so media queries and
+ * reduced-motion can reach it. */
 
-import { type ReactNode, useEffect, useRef, useCallback } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useCallback } from 'react';
 import { IconButton } from './IconButton';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 
 interface DrawerProps {
   open: boolean;
@@ -13,6 +23,8 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, children, side = 'left' }: DrawerProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
+  const titleId = useId();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -43,30 +55,19 @@ export function Drawer({ open, onClose, title, children, side = 'left' }: Drawer
       }}
     >
       <div
-        className="hs-drawer"
-        style={{
-          position: 'fixed',
-          top: 0,
-          [side]: 0,
-          bottom: 0,
-          width: '16rem',
-          maxWidth: '85vw',
-          background: 'var(--color-surface)',
-          borderRight: side === 'left' ? '1px solid var(--color-border)' : undefined,
-          borderLeft: side === 'right' ? '1px solid var(--color-border)' : undefined,
-          zIndex: 'var(--z-drawer)',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: `hs-slide-${side} var(--motion-normal) var(--ease-standard)`,
-        }}
+        className={`hs-drawer hs-drawer--${side}`}
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : 'Navigation'}
+        tabIndex={-1}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-4)', borderBottom: '1px solid var(--color-border)' }}>
-          {title && <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)' }}>{title}</h2>}
+        <div className="hs-drawer__header">
+          {title && <h2 className="hs-drawer__title" id={titleId}>{title}</h2>}
           <IconButton icon={<span>×</span>} label="Close" onClick={onClose} variant="ghost" size="sm" />
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>{children}</div>
+        <div className="hs-drawer__body">{children}</div>
       </div>
     </div>
   );

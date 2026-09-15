@@ -10,10 +10,11 @@ import { AppFooter } from '@/components/layout/AppFooter';
 import { Drawer } from '@/components/ui/Drawer';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
+import { GlobalSearchBox } from '@/features/reports/components/GlobalSearchBox';
 import { authStore } from '@/state/authStore';
 import { navStore, getNavSnapshot, subscribeNav, type NavItem } from '@/state/navStore';
 import { configStore } from '@/state/configStore';
-import { themeStore } from '@/state/themeStore';
+import { nextThemeMode, useTheme } from '@/lib/useTheme';
 import { setAuthErrorHandler } from '@/services/apiClient';
 import { getConfig, getEnums } from '@/services/configService';
 
@@ -36,8 +37,10 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isDesktop = useIsDesktop();
+  const theme = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [items, setItems] = useState<NavItem[]>(() => getNavSnapshot());
+  const [societyName, setSocietyName] = useState('');
   const [user] = useState(authStore.user);
 
   useEffect(() => {
@@ -66,7 +69,16 @@ export function AppLayout() {
       })
       .catch(() => {});
 
-    getConfig().then((c) => configStore.setConfig(c)).catch(() => {});
+    getConfig()
+      .then((c) => {
+        configStore.setConfig(c);
+        /* The brand is config-driven (SRS §15). Kept in component state because
+           the header must re-render when config arrives — reading the store
+           snapshot during render would leave the brand empty until the next
+           unrelated re-render. */
+        setSocietyName(c.societyName ?? '');
+      })
+      .catch(() => {});
     getEnums().then((e) => configStore.setEnums(e)).catch(() => {});
   }, [navigate]);
 
@@ -90,8 +102,11 @@ export function AppLayout() {
     navigate('/auth/login', { replace: true });
   };
 
+  /* Cycles light → dark → system (design.md §7 requires all three to be
+     reachable). Previously only light/dark were selectable from the UI, so
+     "system" was available on first load and then unreachable. */
   const toggleTheme = () => {
-    themeStore.setMode(themeStore.resolved === 'dark' ? 'light' : 'dark');
+    theme.setMode(nextThemeMode(theme.mode));
   };
 
   const sidebarItems = items.map((item) => ({
@@ -108,11 +123,17 @@ export function AppLayout() {
       <AppHeader
         onMenuToggle={isDesktop ? undefined : () => setDrawerOpen(true)}
         userName={user?.fullName ?? user?.username}
+        societyName={societyName}
         onLogout={handleLogout}
+        onChangePassword={() => navigate('/auth/change-password')}
+        /* FE-12 §17: the header carries the global search entry point. Hidden on
+         * mobile, where the header has no room — the /search route is still
+         * reachable directly, and the sidebar links to it. */
+        searchSlot={isDesktop ? <GlobalSearchBox /> : undefined}
         actions={
           <IconButton
             icon={<Icon name="theme" />}
-            label="Toggle theme"
+            label={`Theme: ${theme.mode}`}
             variant="ghost"
             size="sm"
             onClick={toggleTheme}

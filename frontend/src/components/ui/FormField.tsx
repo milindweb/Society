@@ -12,9 +12,16 @@ interface FormFieldProps {
 }
 
 export function FormField({ label, required, error, hint, children, className = '' }: FormFieldProps) {
-  const id = useId();
+  const generatedId = useId();
+  /* When the caller supplies an id on the child, that id wins — the input keeps
+   * it and `<label for>` must point at the SAME value. Using `generatedId` for
+   * `htmlFor` unconditionally silently broke the association for every field
+   * that passed an explicit id (settings, users, roles, change-password),
+   * leaving the control with no accessible name. */
+  const childId = isValidElement(children) ? (children.props as { id?: string }).id : undefined;
+  const id = childId || generatedId;
   const control = isValidElement(children)
-    ? cloneElement(children as ReactElement<{ id?: string }>, { id: (children.props as { id?: string }).id || id })
+    ? cloneElement(children as ReactElement<{ id?: string }>, { id })
     : children;
 
   return (

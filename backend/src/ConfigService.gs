@@ -181,13 +181,35 @@ var ConfigService = (function () {
   // ---------------------------------------------------------------------------
 
   /**
+   * Sheets that `archive.run` is allowed to move, as `{value,label}` options.
+   *
+   * The list is derived from `Schema.archivableSheets()` so the UI cannot drift
+   * from the sheets the archiver actually walks. It is intentionally NOT part of
+   * the cached enums blob: it is a pure schema lookup (no sheet reads), and
+   * keeping it out of the cache means a deploy that changes the archivable set
+   * takes effect immediately instead of after the cache TTL.
+   *
+   * @return {Array<{value: string, label: string}>}
+   */
+  function archivableEntityOptions() {
+    return Schema.archivableSheets().map(function (name) {
+      var def = Schema.get(name);
+      return { value: name, label: def.label || name };
+    });
+  }
+
+  /**
    * Return all enum/status data for the frontend dropdowns.
    * @return {object}
    */
   function getEnums() {
     var cached = Repository.cacheGet(ENUMS_CACHE_KEY);
     if (cached) {
-      try { return JSON.parse(cached); } catch (e) { /* rebuild */ }
+      try {
+        var hit = JSON.parse(cached);
+        hit.archivableEntities = archivableEntityOptions();
+        return hit;
+      } catch (e) { /* rebuild */ }
     }
 
     var result = {};
@@ -227,6 +249,9 @@ var ConfigService = (function () {
 
     // System enums from SchemaMeta
     result.enums = SchemaMeta.ENUM_OPTIONS;
+
+    // Archivable sheets (never cached — see archivableEntityOptions)
+    result.archivableEntities = archivableEntityOptions();
 
     Repository.cachePut(ENUMS_CACHE_KEY, Utils.safeJsonStringify(result));
     return result;

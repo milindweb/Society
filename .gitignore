@@ -8,6 +8,14 @@ build/
 coverage/
 .playwright/
 test-results/
+# Scratch output dir used when the sandbox delete-guard blocks `vite build` from
+# emptying `dist/` (see FE-14/FE-15 phase notes). Each verification run needs a
+# fresh directory, because the guard counts the files it would have to delete.
+.build-check/
+.build-check-*/
+# Scratch previews from the icon-generation run; only `frontend/public/*` and
+# `frontend/scripts/generate_icons.py` are meant to be committed.
+.iconwork/
 
 # Environment / secrets
 .env
@@ -27,9 +35,12 @@ backend/.clasp.json
 .wrangler/
 wrangler.toml
 wrangler.jsonc
+CLOUDFLARE_SETUP.md
 
 # Project documentation (git-ignored per user request)
 Doc/
+AGENTS.md
+agent.md
 
 # Tests (git-ignored per user request)
 tests/
@@ -52,3 +63,13 @@ Thumbs.db
 
 # Generated artifacts
 appsscript.json
+
+# Frontend test files
+frontend/**/*.test.*
+frontend/**/__tests__/
+frontend/src/test-setup.ts
+frontend/tsconfig.test.json
+frontend/vitest.config.ts.timestamp-*
+
+# AI assistant memory
+.workbuddy-ai/

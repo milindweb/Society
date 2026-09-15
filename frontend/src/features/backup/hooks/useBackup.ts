@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import * as backupService from '@/services/backupService';
-import type { Backup } from '@/types/domain';
+import type { Backup, BackupCreateResult } from '@/types/domain';
 import type { Paginated, PageMeta } from '@/types/api';
 
 interface UseBackupListReturn {
@@ -39,14 +39,15 @@ export function useBackupList(): UseBackupListReturn {
 }
 
 interface UseBackupCreateReturn {
-  create: (scope: string, notes?: string) => Promise<Backup | null>;
-  created: Backup | null;
+  /** `backup.create` returns a summary (`BackupCreateResult`), not a `Backup` row. */
+  create: (scope: string, notes?: string) => Promise<BackupCreateResult | null>;
+  created: BackupCreateResult | null;
   loading: boolean;
   error: string | null;
 }
 
 export function useBackupCreate(): UseBackupCreateReturn {
-  const [created, setCreated] = useState<Backup | null>(null);
+  const [created, setCreated] = useState<BackupCreateResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +56,7 @@ export function useBackupCreate(): UseBackupCreateReturn {
     setError(null);
     setCreated(null);
     try {
-      const result = await backupService.createBackup({ scope: scope as backupService.BackupScope, notes });
+      const result = await backupService.createBackup({ scope, notes: notes || undefined });
       setCreated(result);
       return result;
     } catch (err) {

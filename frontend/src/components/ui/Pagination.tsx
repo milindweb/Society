@@ -10,11 +10,15 @@ interface PaginationProps {
   className?: string;
 }
 
-export function Pagination({ page: { page, total, totalPages, hasNext, hasPrev }, onPageChange, className = '' }: PaginationProps) {
+export function Pagination({ page: { page, pageSize, total, totalPages, hasNext, hasPrev }, onPageChange, className = '' }: PaginationProps) {
+  const size = pageSize > 0 ? pageSize : total;
+  const first = total === 0 ? 0 : (page - 1) * size + 1;
+  const last = total === 0 ? 0 : Math.min(page * size, total);
+
   return (
     <div className={`hs-pagination ${className}`}>
       <span className="hs-pagination__info">
-        {total === 0 ? 'No records' : `Showing ${(page - 1) * total + 1}–${Math.min(page * total, total)} of ${total}`}
+        {total === 0 ? 'No records' : `Showing ${first}–${last} of ${total}`}
       </span>
       <div className="hs-pagination__controls">
         <IconButton

@@ -10,22 +10,15 @@ import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { Alert } from '@/components/ui/Alert';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DataTable, type Column } from '@/components/data/DataTable';
-import { useArchiveRun } from '../hooks/useArchive';
+import { useArchiveRun, useArchivableEntities } from '../hooks/useArchive';
 import type { ArchiveRunJob } from '@/services/backupService';
 
-const ENTITY_OPTIONS = [
-  { value: '', label: 'All entities' },
-  { value: 'Demands', label: 'Demands' },
-  { value: 'Payments', label: 'Payments' },
-  { value: 'Complaints', label: 'Complaints' },
-  { value: 'Visitors', label: 'Visitors' },
-  { value: 'Expenses', label: 'Expenses' },
-  { value: 'Attendance', label: 'Attendance' },
-];
-
+/** Job rows are keyed by the source **sheet** name — the service pushes
+ *  `{ sheet: sheetName, moved, skipped }` (`BackupService.gs:311`). */
 const jobColumns: Column<ArchiveRunJob>[] = [
-  { key: 'entity', header: 'Entity' },
+  { key: 'sheet', header: 'Sheet' },
   { key: 'moved', header: 'Moved', align: 'right' },
   { key: 'skipped', header: 'Skipped', align: 'right' },
 ];
@@ -33,18 +26,39 @@ const jobColumns: Column<ArchiveRunJob>[] = [
 export default function ArchiveRunPage() {
   const navigate = useNavigate();
   const { run, result, loading, error } = useArchiveRun();
+  /* Only sheets the server actually walks (`Schema.archivableSheets()`, surfaced
+   * through config.enums). The old list — Demands/Payments/Complaints/Visitors/
+   * Expenses/Attendance — matched nothing, because none of those sheets are
+   * declared archivable. */
+  const { options: entityOptions, loading: entitiesLoading } = useArchivableEntities();
+
   const [entity, setEntity] = useState('');
   const [olderThanMonths, setOlderThanMonths] = useState<number>(12);
+  const [reason, setReason] = useState('');
+  /* Preview is the default. A real run copies rows and writes index entries;
+   * `BackupService.gs:266` only skips those writes while `dryRun` is truthy. */
   const [dryRun, setDryRun] = useState(true);
+  const [confirming, setConfirming] = useState(false);
+
+  const runNow = async () => {
+    setConfirming(false);
+    await run(entity || undefined, olderThanMonths, dryRun, reason || undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await run(entity || undefined, olderThanMonths, dryRun);
+    if (dryRun) {
+      await runNow();
+      return;
+    }
+    setConfirming(true);
   };
+
+  const selectOptions = [{ value: '', label: 'All archivable sheets' }, ...entityOptions];
 
   return (
     <div>
-      <PageHeader title="Run Archive" subtitle="Move old records to archive sheets" />
+      <PageHeader title="Run Archive" subtitle="Copy old records into their archive sheets" />
 
       <Card style={{ maxWidth: 700 }}>
         <form onSubmit={handleSubmit}>
@@ -52,26 +66,42 @@ export default function ArchiveRunPage() {
             {error && <Alert variant="danger">{error}</Alert>}
 
             {result && (
-              <Alert variant={dryRun ? 'info' : 'success'}>
-                {dryRun ? 'Dry run complete.' : 'Archive complete.'}{' '}
+              <Alert variant={result.dryRun ? 'info' : 'success'}>
+                {result.dryRun
+                  ? 'Dry run complete — nothing was moved.'
+                  : 'Archive complete.'}{' '}
                 Moved: {result.movedCount}, Skipped: {result.skippedCount}
               </Alert>
             )}
 
-            <FormField label="Entity">
+            <FormField label="Sheet">
               <Select
-                options={ENTITY_OPTIONS}
+                aria-label="Sheet to archive"
+                options={selectOptions}
                 value={entity}
+                disabled={entitiesLoading}
                 onChange={(e) => setEntity(e.target.value)}
               />
             </FormField>
 
-            <FormField label="Older than (months)" required>
+            <FormField
+              label="Older than (months)"
+              required
+              hint="Records created before this cutoff are candidates."
+            >
               <Input
                 type="number"
                 min={1}
                 value={olderThanMonths}
                 onChange={(e) => setOlderThanMonths(Number(e.target.value))}
+              />
+            </FormField>
+
+            <FormField label="Reason" hint="Recorded on each archive index entry.">
+              <Input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="e.g., Scheduled archive"
               />
             </FormField>
 
@@ -85,8 +115,14 @@ export default function ArchiveRunPage() {
 
             {result && result.jobs.length > 0 && (
               <div style={{ marginTop: 'var(--space-4)' }}>
-                <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>Results by entity:</h4>
-                <DataTable columns={jobColumns} data={result.jobs} />
+                <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+                  Results by sheet:
+                </h4>
+                <DataTable
+                  columns={jobColumns}
+                  data={result.jobs}
+                  getRowId={(row) => row.sheet}
+                />
               </div>
             )}
           </CardBody>
@@ -101,6 +137,21 @@ export default function ArchiveRunPage() {
           </CardFooter>
         </form>
       </Card>
+
+      <ConfirmDialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        onConfirm={runNow}
+        title="Run archive for real?"
+        message={
+          'Matching records will be copied into their archive sheets and an archive index entry ' +
+          'will be written for each one. Records with unsettled financial positions are skipped. ' +
+          'Run a dry run first if you have not already.'
+        }
+        confirmLabel="Run Archive"
+        variant="danger"
+        loading={loading}
+      />
     </div>
   );
 }

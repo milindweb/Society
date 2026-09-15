@@ -1,42 +1,32 @@
-/* DashboardPage.tsx — design.md §6, §10: KPI row + recent activity */
+/* DashboardPage.tsx — FE-04
+ * SRS §2: role-aware dashboard — KPI row, recent payments/complaints/notices/visitors as
+ *         COMPACT TABLES (not large cards), quick actions.
+ * design.md §6: PageHeader -> KPI row -> primary data -> recent activity tables.
+ * design.md §5: sections and quick actions are permission-derived, never a hardcoded role list.
+ * Layering (frontend-architecture.md §1): page composes; useDashboard owns the fetch. */
 
-import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { KpiCard } from '@/components/data/KpiCard';
-import { AmountText } from '@/components/data/AmountText';
-import { DataTable, type Column } from '@/components/data/DataTable';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { Card, CardHeader, CardBody } from '@/components/ui/Card';
+import { Card, CardBody } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { type Column } from '@/components/data/DataTable';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { AmountText } from '@/components/data/AmountText';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PermissionGate } from '@/app/PermissionGate';
+import { KpiRow } from '../components/KpiRow';
+import { RecentTable } from '../components/RecentTable';
+import { useDashboard } from '../hooks/useDashboard';
 import { formatDate } from '@/lib/dates';
-import { formatMoney } from '@/lib/money';
-import type { DashboardSummary, Payment, Complaint } from '@/types/domain';
+import type { Payment, Complaint, Notice, Visitor } from '@/types/domain';
 
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const load = () => {
-    setLoading(true);
-    setError('');
-    import('@/services/dashboardService')
-      .then(({ getDashboardSummary }) => getDashboardSummary())
-      .then((res) => {
-        setSummary(res);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-        setLoading(false);
-      });
-  };
-
-  useEffect(load, []);
+  const navigate = useNavigate();
+  const { summary, loading, error, reload } = useDashboard();
 
   const paymentColumns: Column<Payment>[] = [
-    { key: 'receiptNumber', header: 'Receipt' },
+    { key: 'receiptNumber', header: 'Receipt', render: (r) => r.receiptNumber ?? '—' },
     { key: 'flatNumber', header: 'Flat' },
     { key: 'amount', header: 'Amount', align: 'right', render: (r) => <AmountText amount={r.amount} /> },
     { key: 'paymentDate', header: 'Date', render: (r) => formatDate(r.paymentDate) },
@@ -48,58 +38,129 @@ export default function DashboardPage() {
     { key: 'title', header: 'Title' },
     { key: 'flatNumber', header: 'Flat' },
     { key: 'statusKey', header: 'Status', render: (r) => <StatusBadge statusKey={r.statusKey} /> },
-    { key: 'createdAt', header: 'Date', render: (r) => formatDate(r.createdAt) },
+    { key: 'raisedAt', header: 'Date', render: (r) => formatDate(r.raisedAt) },
+  ];
+
+  const noticeColumns: Column<Notice>[] = [
+    { key: 'title', header: 'Title' },
+    { key: 'noticeTypeName', header: 'Type', render: (r) => r.noticeTypeName ?? '—' },
+    { key: 'noticeDate', header: 'Date', render: (r) => formatDate(r.noticeDate) },
+    {
+      key: 'isPublished',
+      header: 'Status',
+      render: (r) => <StatusBadge statusKey={r.isPublished ? 'PUBLISHED' : 'DRAFT'} />,
+    },
+  ];
+
+  const visitorColumns: Column<Visitor>[] = [
+    { key: 'visitorName', header: 'Visitor' },
+    { key: 'flatNumber', header: 'Flat' },
+    { key: 'visitorTypeName', header: 'Type', render: (r) => r.visitorTypeName ?? '—' },
+    { key: 'entryAt', header: 'Entry', render: (r) => formatDate(r.entryAt) },
+    { key: 'statusKey', header: 'Status', render: (r) => <StatusBadge statusKey={r.statusKey} /> },
   ];
 
   if (error) {
     return (
       <div>
         <PageHeader title="Dashboard" subtitle="Overview and current activity" />
-        <ErrorState title="Could not load dashboard" message={error} onRetry={load} />
+        <ErrorState title="Could not load dashboard" message={error} onRetry={() => void reload()} />
       </div>
     );
   }
 
-  const finance = summary?.finance;
-  const fm = summary?.flatsMembers;
+  const recentPayments = summary?.recentPayments ?? [];
+  const recentComplaints = summary?.recentComplaints ?? [];
+  const recentNotices = summary?.recentNotices ?? [];
+  const recentVisitors = summary?.recentVisitors ?? [];
+  const quickActions = summary?.quickActions ?? [];
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Overview and current activity" />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Overview and current activity"
+        actions={
+          <Button
+            variant="secondary"
+            icon={<Icon name="refresh" size={16} />}
+            onClick={() => void reload()}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
-      <div className="hs-grid hs-grid-cols-2 hs-lg-grid-cols-4" style={{ gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
-        <KpiCard label="Total Flats" value={loading ? '…' : (fm?.totalFlats ?? 0)} icon={<Icon name="flats" />} />
-        <KpiCard label="Total Members" value={loading ? '…' : (fm?.totalMembers ?? 0)} icon={<Icon name="members" />} />
-        <KpiCard label="Total Demand" value={loading ? '…' : formatMoney(finance?.totalDemand ?? 0)} icon={<Icon name="payments" />} />
-        <KpiCard label="Outstanding" value={loading ? '…' : formatMoney(finance?.totalOutstanding ?? 0)} icon={<Icon name="warning" />} />
-      </div>
+      <KpiRow summary={summary} loading={loading} />
 
-      <div className="hs-grid hs-grid-cols-1" style={{ gap: 'var(--space-4)' }}>
-        <Card>
-          <CardHeader title="Recent Payments" />
+      {quickActions.length > 0 && (
+        <Card style={{ marginBottom: 'var(--space-5)' }}>
           <CardBody>
-            <DataTable
-              columns={paymentColumns}
-              data={summary?.recentPayments ?? []}
-              loading={loading}
-              getRowId={(r) => r.paymentId}
-              emptyTitle="No recent payments"
-            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              {quickActions.map((action) => (
+                <PermissionGate key={action.route} permission={action.permission}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={action.icon ? <Icon name={action.icon as never} size={16} /> : undefined}
+                    onClick={() => navigate(action.route)}
+                  >
+                    {action.label}
+                  </Button>
+                </PermissionGate>
+              ))}
+            </div>
           </CardBody>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader title="Recent Complaints" />
-          <CardBody>
-            <DataTable
-              columns={complaintColumns}
-              data={summary?.recentComplaints ?? []}
-              loading={loading}
-              getRowId={(r) => r.complaintId}
-              emptyTitle="No recent complaints"
-            />
-          </CardBody>
-        </Card>
+      <div
+        className="hs-grid hs-grid-cols-1 hs-lg-grid-cols-2"
+        style={{ gap: 'var(--space-4)' }}
+      >
+        <RecentTable<Payment>
+          title="Recent Payments"
+          permission="payments.read"
+          columns={paymentColumns}
+          data={recentPayments}
+          loading={loading}
+          getRowId={(r) => r.paymentId}
+          emptyTitle="No recent payments"
+          onRowClick={(r) => navigate(`/payments/${r.paymentId}`)}
+        />
+
+        <RecentTable<Complaint>
+          title="Recent Complaints"
+          permission="complaints.read"
+          columns={complaintColumns}
+          data={recentComplaints}
+          loading={loading}
+          getRowId={(r) => r.complaintId}
+          emptyTitle="No recent complaints"
+          onRowClick={(r) => navigate(`/complaints/${r.complaintId}`)}
+        />
+
+        <RecentTable<Notice>
+          title="Recent Notices"
+          permission="notices.read"
+          columns={noticeColumns}
+          data={recentNotices}
+          loading={loading}
+          getRowId={(r) => r.noticeId}
+          emptyTitle="No recent notices"
+          onRowClick={(r) => navigate(`/notices/${r.noticeId}`)}
+        />
+
+        <RecentTable<Visitor>
+          title="Recent Visitors"
+          permission="visitors.read"
+          columns={visitorColumns}
+          data={recentVisitors}
+          loading={loading}
+          getRowId={(r) => r.visitorId}
+          emptyTitle="No recent visitors"
+        />
       </div>
     </div>
   );

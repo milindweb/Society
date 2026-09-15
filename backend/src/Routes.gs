@@ -605,7 +605,7 @@ var Routes = (function () {
     },
 
     'visitors.create': {
-      permission: 'visitors.log',
+      permission: 'visitors.write',
       validate: validate(
         requireField('visitorName', 'Visitor name'),
         requireField('mobile', 'Mobile'),
@@ -619,7 +619,7 @@ var Routes = (function () {
     },
 
     'visitors.exit': {
-      permission: 'visitors.log',
+      permission: 'visitors.write',
       validate: validate(requireId('visitorId', 'Visitor'), requireClientId),
       handler: function (ctx) { return VisitorService.exit(ctx); },
       scope: 'GLOBAL'

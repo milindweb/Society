@@ -1,5 +1,6 @@
 /* configStore.ts — state/configStore: society config + enums */
 
+import { useSyncExternalStore } from 'react';
 import type { SocietyConfig, ConfigEnums } from '@/types/domain';
 
 interface ConfigState {
@@ -48,13 +49,43 @@ export function subscribeConfig(listener: () => void): () => void {
   };
 }
 
-export function getConfigSnapshot(): { config: SocietyConfig | null; enums: ConfigEnums | null; loaded: boolean } {
-  return { config: configStore.config, enums: configStore.enums, loaded: configStore.loaded };
+export interface ConfigSnapshot {
+  config: SocietyConfig | null;
+  enums: ConfigEnums | null;
+  loaded: boolean;
 }
 
-/* Default values for currency when config hasn't loaded */
+/* `useSyncExternalStore` bails out of a re-render only when the snapshot it reads
+ * is referentially equal to the previous one, so this getter must NOT allocate a
+ * fresh object on every call — doing so re-renders forever. The cache is keyed on
+ * the three underlying values rather than invalidated by `notify()`, so it stays
+ * correct even when a caller assigns to `configStore` directly. */
+let cachedSnapshot: ConfigSnapshot | null = null;
+
+export function getConfigSnapshot(): ConfigSnapshot {
+  const config = configStore.config;
+  const enums = configStore.enums;
+  const loaded = configStore.loaded;
+  if (
+    cachedSnapshot &&
+    cachedSnapshot.config === config &&
+    cachedSnapshot.enums === enums &&
+    cachedSnapshot.loaded === loaded
+  ) {
+    return cachedSnapshot;
+  }
+  cachedSnapshot = { config, enums, loaded };
+  return cachedSnapshot;
+}
+
+/* Default values for currency when config hasn't loaded.
+ *
+ * This SUBSCRIBES. It previously read a snapshot during render without
+ * subscribing, so a component that mounted before `config.get` resolved kept the
+ * default `₹` and an empty society name until some unrelated re-render happened
+ * — which is why the printed receipt showed the wrong currency. */
 export function useConfigStore() {
-  const state = getConfigSnapshot();
+  const state = useSyncExternalStore(subscribeConfig, getConfigSnapshot, getConfigSnapshot);
   return {
     ...state,
     currencyCode: state.config?.currencyCode ?? 'INR',

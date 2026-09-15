@@ -66,6 +66,17 @@ Setup.seedAdminUser({
 });
 ```
 
+### 5b. Seed Dummy Data (optional demo/dev)
+```bash
+clasp run "Setup.seedDummyData" -p '[]'
+```
+**OR** in GAS editor:
+```js
+Setup.seedDummyData();
+```
+Populates every operational sheet with a self-consistent demo dataset (flats, members,
+payments, complaints, visitors, etc.). Idempotent — returns `ALREADY_SEEDED` if run twice.
+
 ### 6. Deploy Web App
 - GAS Editor → Deploy → New deployment
 - Type: Web app

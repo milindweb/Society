@@ -43,11 +43,23 @@ export async function logout(): Promise<{ loggedOut: true }> {
   });
 }
 
+/** Change the signed-in user's own password.
+ *
+ * Returns `void`, not an object: `AuthService.changePassword` ends with
+ * `return { ok: true }` (AuthService.gs:575) — there is **no `data` payload**, so
+ * `apiClient` resolves to `undefined`. The previous `{changed: true}` return type
+ * described a value that never arrived.
+ *
+ * The action carries `permission: null`, so any authenticated user may call it.
+ * A wrong current password comes back as `VALIDATION_ERROR` with a
+ * `currentPassword` field detail (see the backend comment) — deliberately *not*
+ * `UNAUTHENTICATED`, which `apiClient` would treat as a dead session and log the
+ * user out over a single typo. */
 export async function changePassword(
   currentPassword: string,
   newPassword: string,
-): Promise<{ changed: true }> {
-  return apiClient<{ changed: true }>({
+): Promise<void> {
+  await apiClient<unknown>({
     action: 'auth.changePassword',
     payload: { currentPassword, newPassword },
     clientRequestId: generateClientId(),

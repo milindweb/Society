@@ -10,16 +10,7 @@ interface UseAuditListReturn {
   page: PageMeta;
   loading: boolean;
   error: string | null;
-  fetchEntries: (params?: {
-    page?: number;
-    pageSize?: number;
-    entity?: string;
-    entityId?: string;
-    action?: string;
-    from?: string;
-    to?: string;
-    actorUserId?: string;
-  }) => Promise<void>;
+  fetchEntries: (params?: backupService.AuditListParams) => Promise<void>;
 }
 
 export function useAuditList(): UseAuditListReturn {
@@ -30,28 +21,19 @@ export function useAuditList(): UseAuditListReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEntries = useCallback(async (params?: {
-    page?: number;
-    pageSize?: number;
-    entity?: string;
-    entityId?: string;
-    action?: string;
-    from?: string;
-    to?: string;
-    actorUserId?: string;
-  }) => {
+  const fetchEntries = useCallback(async (params?: backupService.AuditListParams) => {
     setLoading(true);
     setError(null);
     try {
       const result: Paginated<AuditEntry> = await backupService.listAuditEntries({
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 25,
-        entity: params?.entity,
-        entityId: params?.entityId,
-        action: params?.action,
-        from: params?.from,
-        to: params?.to,
-        actorUserId: params?.actorUserId,
+        entity: params?.entity || undefined,
+        entityId: params?.entityId || undefined,
+        action: params?.action || undefined,
+        from: params?.from || undefined,
+        to: params?.to || undefined,
+        actorUserId: params?.actorUserId || undefined,
       });
       setEntries(result.items);
       setPage(result.page);

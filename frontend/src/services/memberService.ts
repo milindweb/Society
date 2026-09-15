@@ -9,7 +9,7 @@ interface PaginatedResponse<T> {
   page: { page: number; pageSize: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean };
 }
 
-export async function listMembers(params: PaginationParams & { flatId?: string; relationType?: string }): Promise<PaginatedResponse<Member>> {
+export async function listMembers(params: PaginationParams & { flatId?: string; relationType?: string; statusKey?: string }): Promise<PaginatedResponse<Member>> {
   return apiClient({ action: 'members.list', payload: params });
 }
 

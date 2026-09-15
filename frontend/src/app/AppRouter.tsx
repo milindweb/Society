@@ -33,6 +33,7 @@ const PeriodListPage = lazy(() => import('@/features/maintenance/pages/PeriodLis
 const PaymentListPage = lazy(() => import('@/features/payments/pages/PaymentListPage'));
 const PaymentFormPage = lazy(() => import('@/features/payments/pages/PaymentFormPage'));
 const PaymentDetailPage = lazy(() => import('@/features/payments/pages/PaymentDetailPage'));
+const ReceiptListPage = lazy(() => import('@/features/payments/pages/ReceiptListPage'));
 const ReceiptViewPage = lazy(() => import('@/features/payments/pages/ReceiptViewPage'));
 
 /* Ledger */
@@ -49,6 +50,7 @@ const VisitorFormPage = lazy(() => import('@/features/visitors/pages/VisitorForm
 /* Notices */
 const NoticeListPage = lazy(() => import('@/features/notices/pages/NoticeListPage'));
 const NoticeDetailPage = lazy(() => import('@/features/notices/pages/NoticeDetailPage'));
+const NoticeFormPage = lazy(() => import('@/features/notices/pages/NoticeFormPage'));
 
 /* Meetings */
 const MeetingListPage = lazy(() => import('@/features/meetings/pages/MeetingListPage'));
@@ -57,6 +59,7 @@ const MeetingDetailPage = lazy(() => import('@/features/meetings/pages/MeetingDe
 /* Documents */
 const DocumentListPage = lazy(() => import('@/features/documents/pages/DocumentListPage'));
 const DocumentDetailPage = lazy(() => import('@/features/documents/pages/DocumentDetailPage'));
+const DocumentFormPage = lazy(() => import('@/features/documents/pages/DocumentFormPage'));
 
 /* Parking */
 const ParkingListPage = lazy(() => import('@/features/parking/pages/ParkingListPage'));
@@ -66,19 +69,30 @@ const ParkingAllocationsPage = lazy(() => import('@/features/parking/pages/Parki
 /* Employees */
 const EmployeeListPage = lazy(() => import('@/features/employees/pages/EmployeeListPage'));
 const EmployeeDetailPage = lazy(() => import('@/features/employees/pages/EmployeeDetailPage'));
-const AttendancePage = lazy(() => import('@/features/employees/pages/AttendancePage'));
-const SalaryPage = lazy(() => import('@/features/employees/pages/SalaryPage'));
+const EmployeeFormPage = lazy(() => import('@/features/employees/pages/EmployeeFormPage'));
+const AttendancePage = lazy(() => import('@/features/attendance/pages/AttendancePage'));
+const SalaryPage = lazy(() => import('@/features/salary/pages/SalaryPage'));
+const SalaryDetailPage = lazy(() => import('@/features/salary/pages/SalaryDetailPage'));
 
 /* Expenses */
 const ExpenseListPage = lazy(() => import('@/features/expenses/pages/ExpenseListPage'));
 const ExpenseDetailPage = lazy(() => import('@/features/expenses/pages/ExpenseDetailPage'));
+const ExpenseSummaryPage = lazy(() => import('@/features/expenses/pages/ExpenseSummaryPage'));
 
 /* Reports */
 const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage'));
 const ReportDetailPage = lazy(() => import('@/features/reports/pages/ReportDetailPage'));
 
+/* Search (FE-12 §17) — a top-level destination reached from the header box */
+const GlobalSearchPage = lazy(() => import('@/features/reports/pages/GlobalSearchPage'));
+
 /* Settings */
 const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage'));
+const UsersPage = lazy(() => import('@/features/settings/pages/UsersPage'));
+const RoleMatrixPage = lazy(() => import('@/features/settings/pages/RoleMatrixPage'));
+
+/* Auth — self-service password change (closes the FE-03 gap) */
+const ChangePasswordPage = lazy(() => import('@/features/auth/pages/ChangePasswordPage'));
 
 /* Backup & Audit */
 const BackupListPage = lazy(() => import('@/features/backup/pages/BackupListPage'));
@@ -107,6 +121,11 @@ export function AppRouter() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
 
+          {/* Self-service password change. No permission key: `auth.changePassword`
+              declares `permission: null`, so any authenticated user may change
+              their own password. */}
+          <Route path="/auth/change-password" element={<ChangePasswordPage />} />
+
           {/* Members & Flats */}
           <Route path="/flats" element={<FlatListPage />} />
           <Route path="/flats/new" element={<FlatFormPage />} />
@@ -115,6 +134,7 @@ export function AppRouter() {
           <Route path="/members" element={<MemberListPage />} />
           <Route path="/members/new" element={<MemberFormPage />} />
           <Route path="/members/:memberId" element={<MemberDetailPage />} />
+          <Route path="/members/:memberId/edit" element={<MemberFormPage />} />
 
           {/* Maintenance */}
           <Route path="/maintenance" element={<MaintenanceDashboardPage />} />
@@ -127,9 +147,11 @@ export function AppRouter() {
           <Route path="/payments" element={<PaymentListPage />} />
           <Route path="/payments/new" element={<PaymentFormPage />} />
           <Route path="/payments/:paymentId" element={<PaymentDetailPage />} />
+          <Route path="/receipts" element={<ReceiptListPage />} />
           <Route path="/receipts/:receiptId" element={<ReceiptViewPage />} />
 
-          {/* Ledger */}
+          {/* Ledger — /ledger opens the summary grid; /ledger/:flatId the flat's entries */}
+          <Route path="/ledger" element={<LedgerPage />} />
           <Route path="/ledger/:flatId" element={<LedgerPage />} />
 
           {/* Complaints */}
@@ -142,7 +164,9 @@ export function AppRouter() {
 
           {/* Notices */}
           <Route path="/notices" element={<NoticeListPage />} />
+          <Route path="/notices/new" element={<NoticeFormPage />} />
           <Route path="/notices/:noticeId" element={<NoticeDetailPage />} />
+          <Route path="/notices/:noticeId/edit" element={<NoticeFormPage />} />
 
           {/* Meetings */}
           <Route path="/meetings" element={<MeetingListPage />} />
@@ -150,7 +174,9 @@ export function AppRouter() {
 
           {/* Documents */}
           <Route path="/documents" element={<DocumentListPage />} />
+          <Route path="/documents/new" element={<DocumentFormPage />} />
           <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
+          <Route path="/documents/:documentId/edit" element={<DocumentFormPage />} />
 
           {/* Parking */}
           <Route path="/parking" element={<ParkingListPage />} />
@@ -159,29 +185,62 @@ export function AppRouter() {
 
           {/* Employees */}
           <Route path="/employees" element={<EmployeeListPage />} />
+          <Route path="/employees/new" element={<EmployeeFormPage />} />
           <Route path="/employees/:employeeId" element={<EmployeeDetailPage />} />
+          <Route path="/employees/:employeeId/edit" element={<EmployeeFormPage />} />
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/salary" element={<SalaryPage />} />
+          <Route path="/salary/:salaryId" element={<SalaryDetailPage />} />
 
-          {/* Expenses */}
+          {/* Expenses — /expenses/summary is registered BEFORE the :expenseId
+              route so the literal path is not swallowed by the parameter. */}
           <Route path="/expenses" element={<ExpenseListPage />} />
+          <Route path="/expenses/summary" element={<ExpenseSummaryPage />} />
           <Route path="/expenses/:expenseId" element={<ExpenseDetailPage />} />
 
           {/* Reports */}
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/reports/:reportKey" element={<ReportDetailPage />} />
 
-          {/* Settings */}
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/*" element={<SettingsPage />} />
+          {/* Search — global, permission-filtered server-side */}
+          <Route path="/search" element={<GlobalSearchPage />} />
 
-          {/* Backup & Audit */}
-          <Route path="/settings/backup" element={<BackupListPage />} />
-          <Route path="/settings/backup/new" element={<BackupCreatePage />} />
-          <Route path="/settings/backup/archive" element={<ArchiveRunPage />} />
-          <Route path="/settings/backup/archived" element={<ArchivedRecordsPage />} />
-          <Route path="/settings/audit" element={<AuditListPage />} />
-          <Route path="/settings/audit/:auditId" element={<AuditDetailPage />} />
+          {/* Settings — /settings/entities/:entityKey is a metadata-driven master-data
+              section; the literal paths below are registered first so they are not
+              swallowed by the parameter. */}
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/entities/:entityKey" element={<SettingsPage />} />
+
+          {/* User and role administration. Gated on the same keys their backend
+              routes use (Routes.gs:1076, :1125), so an unpermitted user is sent to
+              /forbidden instead of loading a page whose every call would fail. */}
+          <Route element={<ProtectedRoute permission="users.manage" />}>
+            <Route path="/settings/users" element={<UsersPage />} />
+          </Route>
+          <Route element={<ProtectedRoute permission="roles.read" />}>
+            <Route path="/settings/roles" element={<RoleMatrixPage />} />
+          </Route>
+
+          {/* Backup & Archive. Each block is gated on the exact key its backend
+              routes declare (Routes.gs:1033-1051), so an unpermitted user is
+              sent to /forbidden instead of loading a page whose every call
+              would come back FORBIDDEN. */}
+          <Route element={<ProtectedRoute permission="backup.run" />}>
+            <Route path="/settings/backup" element={<BackupListPage />} />
+            <Route path="/settings/backup/new" element={<BackupCreatePage />} />
+          </Route>
+          <Route element={<ProtectedRoute permission="archive.run" />}>
+            <Route path="/settings/backup/archive" element={<ArchiveRunPage />} />
+          </Route>
+          <Route element={<ProtectedRoute permission="archive.read" />}>
+            <Route path="/settings/backup/archived" element={<ArchivedRecordsPage />} />
+          </Route>
+
+          {/* Audit trail */}
+          <Route element={<ProtectedRoute permission="audit.read" />}>
+            <Route path="/settings/audit" element={<AuditListPage />} />
+            <Route path="/settings/audit/:auditId" element={<AuditDetailPage />} />
+          </Route>
 
           <Route path="/forbidden" element={<Forbidden />} />
           </Route>

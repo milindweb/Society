@@ -198,10 +198,35 @@ var Setup = (function () {
       ['documents.write', 'documents', 'write', 'Create/update documents', '', 'ACTIVE'],
       ['employees.read', 'employees', 'read', 'Read employees', '', 'ACTIVE'],
       ['employees.write', 'employees', 'write', 'Create/update employees', '', 'ACTIVE'],
+      ['attendance.read', 'attendance', 'read', 'Read employee attendance', '', 'ACTIVE'],
+      ['attendance.write', 'attendance', 'write', 'Mark employee attendance', '', 'ACTIVE'],
+      ['salary.read', 'salary', 'read', 'Read salary records', '', 'ACTIVE'],
+      ['salary.write', 'salary', 'write', 'Prepare/update/pay salary', '', 'ACTIVE'],
+      ['salary.approve', 'salary', 'approve', 'Approve salary runs', '', 'ACTIVE'],
       ['parking.read', 'parking', 'read', 'Read parking data', '', 'ACTIVE'],
       ['parking.write', 'parking', 'write', 'Allocate/manage parking', '', 'ACTIVE'],
       ['reports.read', 'reports', 'read', 'Read reports', '', 'ACTIVE'],
+      ['reports.export', 'reports', 'export', 'Export reports to CSV', '', 'ACTIVE'],
       ['dashboard.read', 'dashboard', 'read', 'Read dashboard', '', 'ACTIVE'],
+      /* --- FE-12 repair: keys used by Routes.gs but never seeded ---
+       * `RbacService.resolvePermissions` builds a user's permission set ONLY from
+       * rows in `Role_Permissions`, and `seedRolePermissions` creates those rows
+       * ONLY for keys present in this list. A route gated on an unseeded key
+       * therefore returns FORBIDDEN for EVERY role, ADMIN included. These keys
+       * were in use but missing, which made the whole Maintenance module, all of
+       * Backup/Archive, and Roles/Users management unreachable in a fresh deploy. */
+      ['maintenance.read', 'maintenance', 'read', 'Read maintenance & billing periods', '', 'ACTIVE'],
+      ['maintenance.write', 'maintenance', 'write', 'Edit demands, charges and periods', '', 'ACTIVE'],
+      ['maintenance.generate', 'maintenance', 'generate', 'Generate demands for a period', '', 'ACTIVE'],
+      ['maintenance.lock', 'maintenance', 'lock', 'Lock/unlock a billing period', '', 'ACTIVE'],
+      ['interest.waive', 'maintenance', 'waive', 'Waive late-payment interest', '', 'ACTIVE'],
+      ['payments.reverse', 'payments', 'reverse', 'Reverse a recorded payment', '', 'ACTIVE'],
+      ['backup.run', 'backup', 'run', 'Run a manual backup', '', 'ACTIVE'],
+      ['archive.run', 'backup', 'archive', 'Run an archive job', '', 'ACTIVE'],
+      ['archive.read', 'backup', 'readArchive', 'Read archived records', '', 'ACTIVE'],
+      ['roles.read', 'roles', 'read', 'Read roles', '', 'ACTIVE'],
+      ['roles.manage', 'roles', 'manage', 'Create/update roles and permissions', '', 'ACTIVE'],
+      ['users.manage', 'users', 'manage', 'Create/update/deactivate users', '', 'ACTIVE'],
       ['backup.write', 'backup', 'write', 'Create backups', '', 'ACTIVE'],
       ['audit.read', 'audit', 'read', 'Read audit log', '', 'ACTIVE'],
       ['settings.read', 'settings', 'read', 'Read settings', '', 'ACTIVE'],
@@ -493,7 +518,10 @@ var Setup = (function () {
       { typeKey: 'SGM', typeName: 'Special General Meeting', quorumPercent: 40, sortOrder: 2, status: 'ACTIVE' },
       { typeKey: 'COMMITTEE', typeName: 'Committee Meeting', quorumPercent: 60, sortOrder: 3, status: 'ACTIVE' }
     ]);
-    var meetingTypeKey = { AGM: meetingTypes[0].meetingTypeId, SGM: meetingTypes[1].meetingTypeId, COMMITTEE: meetingTypes[2].meetingTypeId };
+    // NOTE: Meetings.meetingTypeKey stores a Meeting_Types.typeKey (e.g. 'AGM'), NOT the
+    // meetingTypeId — CommunicationService's create validator and buildMeetingTypeMap both
+    // look the type up by typeKey. A former `meetingTypeKey` map here held ids and was never
+    // read; it has been removed so nobody copies it into a meeting record.
 
     var expenseCategories = seed('Expense_Categories', [
       { categoryKey: 'ELECTRICITY', categoryName: 'Electricity', description: 'Common area power', isSalaryCategory: false, sortOrder: 1, status: 'ACTIVE' },

@@ -542,7 +542,17 @@ var AuthService = (function () {
         result: 'FAILED',
         actorUserId: params.userId
       });
-      return { ok: false, error: 'UNAUTHENTICATED' };
+      // A wrong current password is a VALIDATION failure, not an auth failure:
+      // the caller's session is perfectly valid. Returning UNAUTHENTICATED here
+      // made the frontend's apiClient treat the session as dead — it cleared
+      // auth and bounced the user to the login screen, so one typo ended the
+      // session. Report it against the field that was wrong instead.
+      return {
+        ok: false,
+        error: 'VALIDATION_ERROR',
+        message: 'Current password is incorrect.',
+        details: [{ field: 'currentPassword', message: 'Current password is incorrect.' }]
+      };
     }
 
     // Validate new password

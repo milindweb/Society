@@ -3,63 +3,82 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 import { DataTable, type Column } from '@/components/data/DataTable';
 import { PaginationBar } from '@/components/data/PaginationBar';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Alert } from '@/components/ui/Alert';
 import { useAuditList } from '../hooks/useAudit';
+import { formatDateTime } from '@/lib/dates';
 import type { AuditEntry } from '@/types/domain';
 
-const ENTITY_OPTIONS = [
-  { value: '', label: 'All entities' },
-  { value: 'Payment', label: 'Payments' },
-  { value: 'Demand', label: 'Demands' },
-  { value: 'Member', label: 'Members' },
-  { value: 'Flat', label: 'Flats' },
-  { value: 'Expense', label: 'Expenses' },
-  { value: 'User', label: 'Users' },
-  { value: 'Role', label: 'Roles' },
-  { value: 'Complaint', label: 'Complaints' },
+const mono = { fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' } as const;
+
+/** `Audit_Log.ts` is the timestamp column — there is no `timestamp` column
+ *  (`Schema.gs:278`). Rendering `row.timestamp` produced an empty column. */
+const columns: Column<AuditEntry>[] = [
+  { key: 'auditId', header: 'ID', render: (row) => <span style={mono}>{row.auditId}</span> },
+  { key: 'ts', header: 'When', render: (row) => (row.ts ? formatDateTime(row.ts) : '—') },
+  { key: 'entity', header: 'Entity' },
+  {
+    key: 'entityId',
+    header: 'Record ID',
+    render: (row) => <span style={mono}>{row.entityId || '—'}</span>,
+  },
+  { key: 'action', header: 'Action' },
+  { key: 'actor', header: 'Actor', render: (row) => row.actorName || row.actorUserId || '—' },
+  { key: 'result', header: 'Result', render: (row) => <StatusBadge statusKey={row.result} /> },
 ];
 
-const columns: Column<AuditEntry>[] = [
-  { key: 'auditId', header: 'ID', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{row.auditId}</span> },
-  { key: 'entity', header: 'Entity' },
-  { key: 'entityId', header: 'Record ID', render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{row.entityId}</span> },
-  { key: 'action', header: 'Action' },
-  { key: 'actorName', header: 'Actor', render: (row) => row.actorName ?? row.actorUserId },
-  { key: 'timestamp', header: 'When', render: (row) => new Date(row.timestamp).toLocaleString() },
-];
+interface Filters {
+  entity: string;
+  action: string;
+  from: string;
+  to: string;
+  actorUserId: string;
+}
+
+const EMPTY_FILTERS: Filters = { entity: '', action: '', from: '', to: '', actorUserId: '' };
 
 export default function AuditListPage() {
   const navigate = useNavigate();
   const { entries, page, loading, error, fetchEntries } = useAuditList();
-  const [entity, setEntity] = useState('');
-  const [action, setAction] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [actorUserId, setActorUserId] = useState('');
 
-  const load = (p = 1) => {
-    fetchEntries({
-      page: p,
-      pageSize: 25,
-      entity: entity || undefined,
-      action: action || undefined,
-      from: from || undefined,
-      to: to || undefined,
-      actorUserId: actorUserId || undefined,
-    });
-  };
+  /* `draft` holds what the user is typing; `applied` is what the last search
+   * used. Splitting them keeps the query from firing on every keystroke while
+   * still reloading when the filter is actually submitted. */
+  const [draft, setDraft] = useState<Filters>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<Filters>(EMPTY_FILTERS);
+  const [pageNo, setPageNo] = useState(1);
 
   useEffect(() => {
-    load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchEntries({
+      page: pageNo,
+      pageSize: 25,
+      entity: applied.entity || undefined,
+      action: applied.action || undefined,
+      from: applied.from || undefined,
+      to: applied.to || undefined,
+      actorUserId: applied.actorUserId || undefined,
+    });
+  }, [fetchEntries, pageNo, applied]);
 
-  const handleFilter = () => load(1);
+  const set = (key: keyof Filters) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setDraft((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleFilter = () => {
+    setPageNo(1);
+    setApplied(draft);
+  };
+
+  const handleReset = () => {
+    setDraft(EMPTY_FILTERS);
+    setPageNo(1);
+    setApplied(EMPTY_FILTERS);
+  };
 
   return (
     <div>
@@ -69,40 +88,58 @@ export default function AuditListPage() {
         <CardBody>
           <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ minWidth: 150 }}>
-              <FormField label="Entity">
-                <Select options={ENTITY_OPTIONS} value={entity} onChange={(e) => setEntity(e.target.value)} />
+              <FormField
+                label="Entity"
+                hint="Source sheet, e.g. Payments"
+              >
+                {/* Free text, not a dropdown: `Audit_Log.entity` stores whatever
+                 *  label the writer passed (sheet names such as `Payments`, plus
+                 *  `SYSTEM` and `Reports`), and the filter is an exact match.
+                 *  A hardcoded list would silently hide the labels it omits. */}
+                <Input
+                  value={draft.entity}
+                  onChange={set('entity')}
+                  placeholder="e.g. Payments"
+                />
               </FormField>
             </div>
             <div style={{ minWidth: 150 }}>
               <FormField label="Action">
-                <Input value={action} onChange={(e) => setAction(e.target.value)} placeholder="e.g. PAYMENT_RECORDED" />
+                <Input
+                  value={draft.action}
+                  onChange={set('action')}
+                  placeholder="e.g. PAYMENT_RECORDED"
+                />
               </FormField>
             </div>
             <div style={{ minWidth: 140 }}>
               <FormField label="From">
-                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input type="date" value={draft.from} onChange={set('from')} />
               </FormField>
             </div>
             <div style={{ minWidth: 140 }}>
               <FormField label="To">
-                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+                <Input type="date" value={draft.to} onChange={set('to')} />
               </FormField>
             </div>
             <div style={{ minWidth: 150 }}>
               <FormField label="Actor User ID">
-                <Input value={actorUserId} onChange={(e) => setActorUserId(e.target.value)} />
+                <Input value={draft.actorUserId} onChange={set('actorUserId')} />
               </FormField>
             </div>
-            <button type="button" className="hs-btn hs-btn--primary hs-btn--md" onClick={handleFilter}>
-              Filter
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <Button onClick={handleFilter}>Filter</Button>
+              <Button variant="ghost" onClick={handleReset}>
+                Reset
+              </Button>
+            </div>
           </div>
         </CardBody>
       </Card>
 
       <Card>
         <CardBody>
-          {error && <div className="hs-alert hs-alert--danger" style={{ marginBottom: 'var(--space-4)' }}>{error}</div>}
+          {error && <Alert variant="danger">{error}</Alert>}
           <DataTable
             columns={columns}
             data={entries}
@@ -115,7 +152,7 @@ export default function AuditListPage() {
           {page.totalPages > 1 && (
             <PaginationBar
               page={page}
-              onPageChange={(p) => load(p)}
+              onPageChange={(p) => setPageNo(p)}
             />
           )}
         </CardBody>

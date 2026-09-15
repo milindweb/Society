@@ -34,10 +34,13 @@ const STATUS_TONE_MAP: Record<string, Tone> = {
   HALF_DAY: 'warning',
   HOLIDAY: 'neutral',
 
-  /* Salary */
+  /* Salary — domains SALARY = DRAFT/APPROVED/PAID/CANCELLED (`Setup.gs:71`).
+   * PAID is shared with the DEMAND domain and is already 'success' above; the
+   * salary-specific keys are listed here for clarity. */
   DRAFT: 'neutral',
   APPROVED: 'success',
   PAID_SALARY: 'success',
+  CANCELLED_SALARY: 'neutral',
 
   /* Notice */
   PUBLISHED: 'success',
@@ -69,13 +72,20 @@ const STATUS_TONE_MAP: Record<string, Tone> = {
   INACTIVE_USER: 'neutral',
   LOCKED: 'danger',
 
-  /* Expense */
+  /* Expense — domain EXPENSE = POSTED/CANCELLED (`Setup.gs:73`). POSTED is the
+   * normal, settled state, so it reads as success rather than neutral. */
+  POSTED: 'success',
   EXPENSE_CANCELLED: 'neutral',
 
   /* Billing */
   OPEN_PERIOD: 'info',
   LOCKED_PERIOD: 'warning',
   CLOSED_PERIOD: 'neutral',
+
+  /* Result — domain RESULT = SUCCESS/FAILED (`Setup.gs:75`). Used by
+   * `Audit_Log.result` and `Backups.statusKey`. `FAILED` is already mapped
+   * under Payment above; the two domains share the key. */
+  SUCCESS: 'success',
 };
 
 export function getStatusTone(statusKey: string): Tone {

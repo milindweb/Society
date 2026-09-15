@@ -1,13 +1,44 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Housing Society Management System" />
+    <!-- Tells the UA to render scrollbars, form controls and the canvas in the
+         active scheme instead of always-light (design.md §7). -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f8f9fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)" />
     <title>Society Management</title>
+    <!-- Icons. Generated from the crest at the repo root by
+         `python scripts/generate_icons.py` — do not hand-edit the binaries.
+         The PNG favicons keep their alpha so the crest sits on any tab colour;
+         `apple-touch-icon.png` is pre-flattened onto the brand navy because iOS
+         discards alpha. `favicon.ico` is the legacy fallback. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Pre-paint theme resolution (FE-15). `themeStore` lives in the deferred
+         module bundle, so without this the browser paints the light palette and
+         only then flips to dark — a visible flash on every load for dark users.
+         This runs synchronously, before first paint. It mirrors
+         `src/state/themeStore.ts`; keep the two in sync.
+         NOTE: the inline body below is hashed into the Content-Security-Policy
+         in `public/_headers` (`script-src`). If you change the code between the
+         tags, re-run `npm run csp:hash` and update that hash, or the production
+         CSP will block this script. -->
+    <script>(function(){var m=null;try{m=localStorage.getItem('theme');}catch(e){m=null;}if(m!=='light'&&m!=='dark'&&m!=='system'){m='system';}var d=m==='dark';if(m==='system'){d=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}document.documentElement.setAttribute('data-theme',d?'dark':'light');})();</script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="max-width:32rem;margin:4rem auto;padding:1.5rem;font-family:system-ui,sans-serif;line-height:1.5">
+        <h1 style="font-size:1.25rem;margin-bottom:.5rem">JavaScript is required</h1>
+        <p>This application is a single-page app and cannot run without JavaScript. Please enable it and reload.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
