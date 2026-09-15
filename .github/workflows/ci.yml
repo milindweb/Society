@@ -1,27 +1,8 @@
-# .github/workflows/ci.yml — CI quality gate (deployment-architecture.md §2)
+# .github/workflows/ci.yml — CI quality gate
 #
-# FE-15 created this file: the quality job was declared in the architecture doc
-# but never existed, so nothing enforced typecheck / lint / test / build.
-#
-# Scope note — the two remaining jobs from the doc still cannot run here:
-#   * `backend` (node --test tests/backend tests/schema)
-#   * `e2e` (Playwright, tests/e2e/)
-# Both suites now EXIST and PASS locally:
-#     node --test tests/backend/*.test.js tests/schema/*.test.js   # 1205 pass
-#     npm run e2e                                                  # browser suite
-# but the whole `tests/` tree is git-ignored (".gitignore — Tests (git-ignored
-# per user request)"), so a clean CI checkout has no `tests/` directory and
-# running them would only produce a false green. Stop ignoring `tests/` (or add
-# targeted `!tests/e2e/` negations) and uncomment the jobs to enable them.
-#
-# CI needs no Google or Cloudflare credentials: the build only reads
-# `VITE_API_BASE_URL`, which is a non-secret URL.
-#
-# This job has NOT been executed on a runner — the environment it was authored in
-# has no CI. Every step it runs does pass locally (typecheck 0 errors, lint 0
-# problems, tests 696/696, `csp:check` exit 0, build succeeds), so it is expected
-# to go green on its first real run. That is an expectation, not a verified
-# result, and it should be confirmed rather than assumed.
+# Runs typecheck, lint, build, and CSP check on every push/PR.
+# Test files (*.test.ts, __tests__/) are git-ignored and run locally only,
+# so CI skips typecheck:tests and vitest steps.
 
 name: CI
 
@@ -66,19 +47,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # `tsconfig.json` EXCLUDES `**/*.test.ts(x)` and `**/__tests__/**`, so the
-      # step above never looks at the test tree. That blind spot is how 15 stale
-      # service tests — asserting request shapes the services had stopped
-      # sending — sat red for four phases without anyone noticing. This step
-      # typechecks the tests against the same contract types the app uses.
-      - name: Typecheck (tests)
-        run: npm run typecheck:tests
-
       - name: Lint
         run: npm run lint
-
-      - name: Unit tests
-        run: npm run test
 
       - name: Production build
         run: npm run build
