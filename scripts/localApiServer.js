@@ -143,16 +143,46 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET') {
-    // A human-friendly probe; the real app only ever POSTs.
-    send(res, 200, {
-      ok: true,
-      data: {
-        service: 'society-management local API',
-        port: PORT,
-        adminUsername: ADMIN_USERNAME,
-        hint: 'POST {action, payload, token, clientRequestId}',
-      },
-    });
+    // Frontend sends GET with ?action=...&payload=... to avoid GAS 302 redirect.
+    const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
+    const actionParam = parsedUrl.searchParams.get('action');
+    const payloadParam = parsedUrl.searchParams.get('payload');
+
+    if (!actionParam) {
+      // Human-friendly probe when no action param
+      send(res, 200, {
+        ok: true,
+        data: {
+          service: 'society-management local API',
+          port: PORT,
+          adminUsername: ADMIN_USERNAME,
+          hint: 'GET ?action=...&payload=... or POST {action, payload, token, clientRequestId}',
+        },
+      });
+      return;
+    }
+
+    // Build a synthetic body from query params
+    let bodyStr = '{}';
+    try {
+      const payload = payloadParam ? JSON.parse(payloadParam) : {};
+      bodyStr = JSON.stringify({ action: actionParam, ...payload });
+    } catch {
+      bodyStr = JSON.stringify({ action: actionParam, payload: {} });
+    }
+
+    let action = actionParam;
+    try {
+      const output = dispatch('GET', bodyStr);
+      send(res, 200, output);
+      console.log(`  ${action} -> ${output && output.ok !== false ? 'ok' : (output.error ? output.error.code : 'ERROR')}`);
+    } catch (err) {
+      console.error(`  ${action} -> THREW`, err);
+      send(res, 200, {
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: String(err && err.message ? err.message : err) },
+      });
+    }
     return;
   }
 

@@ -19,10 +19,15 @@ export async function apiClient<T>(request: ApiRequest): Promise<T> {
   const token = authStore.token ?? undefined;
   const body: ApiRequest = { ...request, token };
 
-  const response = await fetch(API_BASE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body),
+  // GAS web-app deployments return a 302 redirect; when the browser follows it,
+  // POST is converted to GET and the body is lost. Sending as GET with the
+  // payload URL-encoded avoids the redirect entirely and lets doGet() parse it.
+  const url = new URL(API_BASE_URL);
+  url.searchParams.set('action', request.action);
+  url.searchParams.set('payload', JSON.stringify(body));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
   });
 
   if (!response.ok) {
