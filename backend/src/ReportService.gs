@@ -221,9 +221,10 @@ var ReportService = (function () {
       };
     }
 
-    // Finance (Demands)
+    // Finance (Demands) — including monthly breakdown for charts
     if (permissions.indexOf('maintenance.read') !== -1) {
       var demands = readAll('Demands');
+      var payments = readAll('Payments');
       var totalDemand = 0;
       var totalCollection = 0;
       var totalOutstanding = 0;
@@ -231,6 +232,9 @@ var ReportService = (function () {
       var memberPaid = {};
       var memberPartial = {};
       var memberPending = {};
+      var monthlyDemand = {};
+      var monthlyCollection = {};
+
       for (var i = 0; i < demands.length; i++) {
         var d = demands[i];
         var demand = Utils.toNumber(d.totalPayable, 0);
@@ -246,12 +250,35 @@ var ReportService = (function () {
           else if (paid > 0) { memberPartial[mid] = true; delete memberPending[mid]; }
           else if (!memberPaid[mid] && !memberPartial[mid]) { memberPending[mid] = true; }
         }
+        // Monthly demand by periodKey
+        var period = (d.periodKey || '').substring(0, 7);
+        if (period) {
+          monthlyDemand[period] = (monthlyDemand[period] || 0) + demand;
+        }
       }
+
+      // Monthly collection from payments
+      for (var p = 0; p < payments.length; p++) {
+        var pay = payments[p];
+        if (pay.statusKey === 'CANCELLED') continue;
+        var payMonth = (pay.paymentDate || '').substring(0, 7);
+        if (payMonth) {
+          monthlyCollection[payMonth] = (monthlyCollection[payMonth] || 0) + Utils.toNumber(pay.amount, 0);
+        }
+      }
+
+      // Merge months and sort
+      var allMonths = Object.keys(Object.assign({}, monthlyDemand, monthlyCollection)).sort();
+      var monthlyData = allMonths.map(function(m) {
+        return { month: m, demand: Utils.round2(monthlyDemand[m] || 0), collection: Utils.round2(monthlyCollection[m] || 0) };
+      });
+
       data.finance = {
         totalDemand: Utils.round2(totalDemand),
         totalCollection: Utils.round2(totalCollection),
         totalOutstanding: Utils.round2(totalOutstanding),
-        overdueAmount: Utils.round2(overdueAmount)
+        overdueAmount: Utils.round2(overdueAmount),
+        monthly: monthlyData
       };
       data.counts = {
         paidMembers: Object.keys(memberPaid).length,
@@ -288,16 +315,25 @@ var ReportService = (function () {
       data.recentVisitors = visitors.slice(0, 5);
     }
 
-    // Expenses summary
+    // Expenses summary — including monthly breakdown
     if (permissions.indexOf('expenses.read') !== -1) {
       var expenses = readAll('Expenses');
       var totalExpenses = 0;
+      var monthlyExpenses = {};
       for (var e = 0; e < expenses.length; e++) {
         if (expenses[e].statusKey !== 'CANCELLED') {
-          totalExpenses += Utils.toNumber(expenses[e].amount, 0);
+          var amt = Utils.toNumber(expenses[e].amount, 0);
+          totalExpenses += amt;
+          var expMonth = (expenses[e].expenseDate || '').substring(0, 7);
+          if (expMonth) {
+            monthlyExpenses[expMonth] = (monthlyExpenses[expMonth] || 0) + amt;
+          }
         }
       }
       data.totalExpenses = Utils.round2(totalExpenses);
+      data.monthlyExpenses = Object.keys(monthlyExpenses).sort().map(function(m) {
+        return { month: m, amount: Utils.round2(monthlyExpenses[m]) };
+      });
     }
 
     // Quick actions

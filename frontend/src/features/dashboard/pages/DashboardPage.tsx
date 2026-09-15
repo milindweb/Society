@@ -16,6 +16,7 @@ import { AmountText } from '@/components/data/AmountText';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PermissionGate } from '@/app/PermissionGate';
 import { KpiRow } from '../components/KpiRow';
+import { DashboardCharts } from '../components/DashboardCharts';
 import { RecentTable } from '../components/RecentTable';
 import { useDashboard } from '../hooks/useDashboard';
 import { formatDate } from '@/lib/dates';
@@ -93,6 +94,8 @@ export default function DashboardPage() {
       />
 
       <KpiRow summary={summary} loading={loading} />
+
+      <DashboardCharts summary={summary} loading={loading} />
 
       {quickActions.length > 0 && (
         <Card style={{ marginBottom: 'var(--space-5)' }}>

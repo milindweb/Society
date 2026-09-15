@@ -1025,9 +1025,10 @@ export interface ConfigEnums {
 /* ── Dashboard ── */
 export interface DashboardSummary {
   flatsMembers: { totalFlats: number; totalMembers: number; occupied: number; vacant: number };
-  finance: { totalDemand: number; totalCollection: number; totalOutstanding: number; overdueAmount: number };
+  finance: { totalDemand: number; totalCollection: number; totalOutstanding: number; overdueAmount: number; monthly?: { month: string; demand: number; collection: number }[] };
   counts: { paidMembers: number; partialMembers: number; pendingMembers: number };
   totalExpenses?: number;
+  monthlyExpenses?: { month: string; amount: number }[];
   recentPayments: Payment[];
   recentComplaints: Complaint[];
   recentNotices: Notice[];
