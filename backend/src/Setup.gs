@@ -1756,6 +1756,7 @@ var Setup = (function () {
     healthCheck: healthCheck,
     installTriggers: installTriggers,
     removeTriggers: removeTriggers,
+    ensureAdminPermissions: ensureAdminPermissions,
     dailyMaintenance: dailyMaintenance,
     weeklyBackup: weeklyBackup,
     monthlyArchive: monthlyArchive
