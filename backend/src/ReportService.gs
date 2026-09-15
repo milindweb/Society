@@ -223,7 +223,7 @@ var ReportService = (function () {
           totalMembers: members.filter(function (m) { return m.statusKey === 'ACTIVE'; }).length
         };
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('flats section error: ' + e); }
 
     // Finance (Demands) — including monthly breakdown for charts
     try {
@@ -271,7 +271,7 @@ var ReportService = (function () {
               monthlyCollection[payMonth] = (monthlyCollection[payMonth] || 0) + Utils.toNumber(pay.amount, 0);
             }
           }
-        } catch (e2) {}
+        } catch (e2) { Logger.log('finance/payments inner error: ' + e2); }
 
         var allMonths = Object.keys(Object.assign({}, monthlyDemand, monthlyCollection)).sort();
         var monthlyData = allMonths.map(function(m) {
@@ -291,7 +291,7 @@ var ReportService = (function () {
           pendingMembers: Object.keys(memberPending).length
         };
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('finance section error: ' + e); }
 
     // Recent payments
     try {
@@ -300,7 +300,7 @@ var ReportService = (function () {
         recentPays.sort(function (a, b) { return (b.paymentDate || '').localeCompare(a.paymentDate || ''); });
         data.recentPayments = recentPays.slice(0, 5);
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('recentPayments error: ' + e); }
 
     // Recent complaints
     try {
@@ -309,7 +309,7 @@ var ReportService = (function () {
         complaints.sort(function (a, b) { return (b.raisedAt || b.createdAt || '').localeCompare(a.raisedAt || a.createdAt || ''); });
         data.recentComplaints = complaints.slice(0, 5);
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('recentComplaints error: ' + e); }
 
     // Recent notices
     try {
@@ -318,7 +318,7 @@ var ReportService = (function () {
         notices.sort(function (a, b) { return (b.noticeDate || '').localeCompare(a.noticeDate || ''); });
         data.recentNotices = notices.slice(0, 5);
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('recentNotices error: ' + e); }
 
     // Recent visitors
     try {
@@ -327,7 +327,7 @@ var ReportService = (function () {
         visitors.sort(function (a, b) { return (b.entryAt || '').localeCompare(a.entryAt || ''); });
         data.recentVisitors = visitors.slice(0, 5);
       }
-    } catch (e) {}
+    } catch (e) { Logger.log('recentVisitors error: ' + e); }
 
     // Expenses summary — including monthly breakdown
     try {
@@ -351,6 +351,7 @@ var ReportService = (function () {
         });
       }
     } catch (e) {
+      Logger.log('expenses section error: ' + e);
       data.totalExpenses = 0;
       data.monthlyExpenses = [];
     }
