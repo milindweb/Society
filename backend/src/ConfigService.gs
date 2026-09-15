@@ -387,7 +387,7 @@ var ConfigService = (function () {
    */
   function entityList(entityKey, opts) {
     var resolved = resolveEntity(entityKey);
-    if (!resolved) { return { rows: [], page: Repository.readSheet(resolved ? resolved.sheetName : 'Flats', { page: 1, pageSize: 25 }).page }; }
+    if (!resolved) { return { rows: [], page: { page: (opts && opts.page) || 1, pageSize: (opts && opts.pageSize) || 25, total: 0, totalPages: 0, hasNext: false, hasPrev: false } }; }
 
     var entityDef = SchemaMeta.MASTER_ENTITIES[entityKey];
     var readOpts = {
@@ -766,10 +766,16 @@ var ConfigService = (function () {
 
   /**
    * config.entity.list — paginated master rows.
+   *
+   * Returns rows as the data array and page as a top-level property so that
+   * ApiRouter's envelope step places page into meta.page. The frontend's
+   * apiClient.normaliseData then converts { data: T[], meta: { page } } into
+   * { items: T[], page }, which useEntityRows reads.
    */
   function listEntity(ctx) {
     var p = ctx.payload || {};
-    return { ok: true, data: entityList(p.entity, p) };
+    var result = entityList(p.entity, p);
+    return { ok: true, data: result.rows, page: result.page };
   }
 
   /**
