@@ -275,6 +275,61 @@ var Setup = (function () {
     return rows.length;
   }
 
+  /**
+   * Backfill missing permissions for ADMIN role.
+   * Called when new permissions are added after initial setup.
+   * Finds permissions in the Permissions sheet that have no matching
+   * ADMIN row in Role_Permissions and inserts them as allowed.
+   */
+  function ensureAdminPermissions(ss) {
+    var rpSheet = ss.getSheetByName('Role_Permissions');
+    if (!rpSheet) { return 0; }
+    var rpLastRow = rpSheet.getLastRow();
+    if (rpLastRow <= 1) { return 0; }
+
+    var permSheet = ss.getSheetByName('Permissions');
+    if (!permSheet) { return 0; }
+    var permLastRow = permSheet.getLastRow();
+    if (permLastRow <= 1) { return 0; }
+
+    // Read all permission keys
+    var permCols = Schema.columnsOf('Permissions');
+    var permKeyIdx = permCols.indexOf('permissionKey');
+    var permValues = permSheet.getRange(2, 1, permLastRow - 1, permCols.length).getValues();
+    var allPermKeys = [];
+    for (var i = 0; i < permValues.length; i++) {
+      if (permValues[i][permKeyIdx]) { allPermKeys.push(permValues[i][permKeyIdx]); }
+    }
+
+    // Read existing ADMIN permission keys
+    var rpCols = Schema.columnsOf('Role_Permissions');
+    var rpRoleIdx = rpCols.indexOf('roleKey');
+    var rpPermIdx = rpCols.indexOf('permissionKey');
+    var rpValues = rpSheet.getRange(2, 1, rpLastRow - 1, rpCols.length).getValues();
+    var existingAdminPerms = {};
+    for (var j = 0; j < rpValues.length; j++) {
+      if (rpValues[j][rpRoleIdx] === 'ADMIN' && rpValues[j][rpPermIdx]) {
+        existingAdminPerms[rpValues[j][rpPermIdx]] = true;
+      }
+    }
+
+    // Find missing permissions
+    var ts = Utils.now();
+    var newRows = [];
+    for (var k = 0; k < allPermKeys.length; k++) {
+      if (!existingAdminPerms[allPermKeys[k]]) {
+        newRows.push([
+          Utils.newId('RPR'), 'ADMIN', allPermKeys[k], 'TRUE', ts, ts, '', ''
+        ]);
+      }
+    }
+
+    if (newRows.length > 0) {
+      rpSheet.getRange(rpLastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+    }
+    return newRows.length;
+  }
+
   function seedPaymentModes(ss) {
     var sheet = getOrCreateSheet(ss, 'Payment_Modes');
     var lastRow = sheet.getLastRow();
@@ -1484,6 +1539,7 @@ var Setup = (function () {
     var roleCount = seedRoles(authSS);
     var permCount = seedPermissions(authSS);
     seedRolePermissions(authSS);
+    ensureAdminPermissions(authSS);
     seedPaymentModes(societySS);
     seedEmployeeTypes(societySS);
     seedComplaintPriorities(societySS);

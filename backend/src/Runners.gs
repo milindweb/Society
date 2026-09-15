@@ -50,3 +50,11 @@ function installTriggers() {
 function removeTriggers() {
   return Setup.removeTriggers();
 }
+
+/** Backfill any missing permissions for the ADMIN role. Run once after adding new permissions. */
+function ensureAdminPermissions() {
+  var ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('AUTH_SHEET_ID'));
+  var added = Setup.ensureAdminPermissions(ss);
+  Logger.log('Added ' + added + ' missing ADMIN permissions');
+  return added;
+}
