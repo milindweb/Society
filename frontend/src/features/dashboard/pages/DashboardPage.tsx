@@ -48,7 +48,7 @@ export default function DashboardPage() {
     {
       key: 'isPublished',
       header: 'Status',
-      render: (r) => <StatusBadge statusKey={r.isPublished ? 'PUBLISHED' : 'DRAFT'} />,
+      render: (r) => <StatusBadge statusKey={r.isPublished === 'TRUE' ? 'PUBLISHED' : 'DRAFT'} />,
     },
   ];
 

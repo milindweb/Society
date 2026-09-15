@@ -1,95 +1,86 @@
-/* statusTone.ts — Status key → visual tone mapping (design.md §8) */
+/* statusTone.ts — Status key → visual tone mapping (design.md §8)
+ *
+ * The tone map is derived from Status_Config rows at runtime. The fallback
+ * map below covers common statuses for the brief window before config loads. */
+
+import { configStore } from '@/state/configStore';
 
 export type Tone = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
 
-const STATUS_TONE_MAP: Record<string, Tone> = {
-  /* Complaint */
+/** Fallback tones for common statuses — used before config.enums loads. */
+const FALLBACK_TONES: Record<string, Tone> = {
   OPEN: 'info',
   ASSIGNED: 'warning',
   IN_PROGRESS: 'warning',
   RESOLVED: 'success',
   CLOSED: 'neutral',
   REOPENED: 'danger',
-
-  /* Demand */
   PENDING: 'warning',
   PARTIAL: 'warning',
   PAID: 'success',
   OVERDUE: 'danger',
   CANCELLED: 'neutral',
-
-  /* Payment */
   COMPLETED: 'success',
   FAILED: 'danger',
   REVERSED: 'danger',
-
-  /* Visitor */
   INSIDE: 'info',
   EXITED: 'success',
-
-  /* Attendance */
   PRESENT: 'success',
   ABSENT: 'danger',
   LEAVE: 'warning',
   HALF_DAY: 'warning',
   HOLIDAY: 'neutral',
-
-  /* Salary — domains SALARY = DRAFT/APPROVED/PAID/CANCELLED (`Setup.gs:71`).
-   * PAID is shared with the DEMAND domain and is already 'success' above; the
-   * salary-specific keys are listed here for clarity. */
   DRAFT: 'neutral',
   APPROVED: 'success',
-  PAID_SALARY: 'success',
-  CANCELLED_SALARY: 'neutral',
-
-  /* Notice */
   PUBLISHED: 'success',
   UNPUBLISHED: 'neutral',
   EXPIRED: 'neutral',
-
-  /* Meeting */
   SCHEDULED: 'info',
-  COMPLETED_MEETING: 'success',
-  CANCELLED_MEETING: 'neutral',
-
-  /* Document */
   ACTIVE: 'success',
   INACTIVE: 'neutral',
   ARCHIVED: 'neutral',
-  EXPIRED_DOC: 'danger',
-
-  /* Parking */
   AVAILABLE: 'success',
   OCCUPIED: 'info',
   BLOCKED: 'danger',
-
-  /* Flat / Entity */
   VACANT: 'success',
   MAINTENANCE: 'warning',
-
-  /* User */
-  ACTIVE_USER: 'success',
-  INACTIVE_USER: 'neutral',
   LOCKED: 'danger',
-
-  /* Expense — domain EXPENSE = POSTED/CANCELLED (`Setup.gs:73`). POSTED is the
-   * normal, settled state, so it reads as success rather than neutral. */
   POSTED: 'success',
-  EXPENSE_CANCELLED: 'neutral',
-
-  /* Billing */
-  OPEN_PERIOD: 'info',
-  LOCKED_PERIOD: 'warning',
-  CLOSED_PERIOD: 'neutral',
-
-  /* Result — domain RESULT = SUCCESS/FAILED (`Setup.gs:75`). Used by
-   * `Audit_Log.result` and `Backups.statusKey`. `FAILED` is already mapped
-   * under Payment above; the two domains share the key. */
   SUCCESS: 'success',
 };
 
+/** Build a tone map from config.enums.statuses. Each status row may have a
+ *  `tone` field; otherwise we infer from the statusKey pattern. */
+function buildToneMapFromConfig(): Record<string, Tone> {
+  const enums = configStore.enums;
+  if (!enums?.statuses) return {};
+
+  const map: Record<string, Tone> = {};
+  const statuses = enums.statuses as Record<string, Array<{ statusKey?: string; tone?: string }>>;
+
+  for (const family of Object.values(statuses)) {
+    for (const row of family) {
+      if (!row.statusKey) continue;
+      if (row.tone && ['info', 'success', 'warning', 'danger', 'neutral'].includes(row.tone)) {
+        map[row.statusKey] = row.tone as Tone;
+      }
+    }
+  }
+  return map;
+}
+
+let cachedConfigMap: Record<string, Tone> | null = null;
+
 export function getStatusTone(statusKey: string): Tone {
-  return STATUS_TONE_MAP[statusKey] ?? 'neutral';
+  if (cachedConfigMap === null) {
+    cachedConfigMap = buildToneMapFromConfig();
+  }
+  return cachedConfigMap[statusKey] ?? FALLBACK_TONES[statusKey] ?? 'neutral';
+}
+
+/** Clear the cached config-derived tone map (call after configStore.setEnums). */
+export function resetToneCache(): void {
+  cachedConfigMap = null;
 }
 
 export function getStatusLabel(statusKey: string): string {

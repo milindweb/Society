@@ -32,9 +32,9 @@ export function KpiRow({ summary, loading }: KpiRowProps) {
         icon={<Icon name="flats" />}
       />
       <KpiCard
-        label="Total Members"
-        value={value(fm?.totalMembers ?? 0)}
-        icon={<Icon name="members" />}
+        label="Total Expenses"
+        value={value(formatMoney(summary?.totalExpenses ?? 0))}
+        icon={<Icon name="expenses" />}
       />
       <KpiCard
         label="Monthly Demand"

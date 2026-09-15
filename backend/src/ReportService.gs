@@ -198,13 +198,22 @@ var ReportService = (function () {
    */
   function dashboardSummary(ctx) {
     var permissions = ctx.permissions || [];
-    var sections = {};
+    var data = {
+      flatsMembers: { totalFlats: 0, totalMembers: 0, occupied: 0, vacant: 0 },
+      finance: { totalDemand: 0, totalCollection: 0, totalOutstanding: 0, overdueAmount: 0 },
+      counts: { paidMembers: 0, partialMembers: 0, pendingMembers: 0 },
+      recentPayments: [],
+      recentComplaints: [],
+      recentNotices: [],
+      recentVisitors: [],
+      quickActions: []
+    };
 
-    // Flats/Members section
+    // Flats/Members
     if (permissions.indexOf('flats.read') !== -1) {
       var flats = readAll('Flats');
       var members = readAll('Members');
-      sections.flats = {
+      data.flatsMembers = {
         totalFlats: flats.length,
         occupied: flats.filter(function (f) { return f.statusKey === 'OCCUPIED'; }).length,
         vacant: flats.filter(function (f) { return f.statusKey === 'VACANT'; }).length,
@@ -212,62 +221,97 @@ var ReportService = (function () {
       };
     }
 
-    // Demand/Collection section
+    // Finance (Demands)
     if (permissions.indexOf('maintenance.read') !== -1) {
       var demands = readAll('Demands');
       var totalDemand = 0;
-      var totalPaid = 0;
-      var totalBalance = 0;
-      var overdue = 0;
+      var totalCollection = 0;
+      var totalOutstanding = 0;
+      var overdueAmount = 0;
+      var memberPaid = {};
+      var memberPartial = {};
+      var memberPending = {};
       for (var i = 0; i < demands.length; i++) {
-        totalDemand += Utils.toNumber(demands[i].totalPayable, 0);
-        totalPaid += Utils.toNumber(demands[i].paidAmount, 0);
-        totalBalance += Utils.toNumber(demands[i].balanceAmount, 0);
-        if (demands[i].statusKey === 'OVERDUE') { overdue++; }
+        var d = demands[i];
+        var demand = Utils.toNumber(d.totalPayable, 0);
+        var paid = Utils.toNumber(d.paidAmount, 0);
+        var balance = Utils.toNumber(d.balanceAmount, 0);
+        totalDemand += demand;
+        totalCollection += paid;
+        totalOutstanding += balance;
+        if (d.statusKey === 'OVERDUE') { overdueAmount += balance; }
+        var mid = d.memberId || d.flatId;
+        if (mid) {
+          if (balance <= 0) { memberPaid[mid] = true; delete memberPartial[mid]; delete memberPending[mid]; }
+          else if (paid > 0) { memberPartial[mid] = true; delete memberPending[mid]; }
+          else if (!memberPaid[mid] && !memberPartial[mid]) { memberPending[mid] = true; }
+        }
       }
-      sections.finance = {
+      data.finance = {
         totalDemand: Utils.round2(totalDemand),
-        totalPaid: Utils.round2(totalPaid),
-        totalBalance: Utils.round2(totalBalance),
-        overdueCount: overdue
+        totalCollection: Utils.round2(totalCollection),
+        totalOutstanding: Utils.round2(totalOutstanding),
+        overdueAmount: Utils.round2(overdueAmount)
+      };
+      data.counts = {
+        paidMembers: Object.keys(memberPaid).length,
+        partialMembers: Object.keys(memberPartial).length,
+        pendingMembers: Object.keys(memberPending).length
       };
     }
 
-    // Complaints section
+    // Recent payments
+    if (permissions.indexOf('payments.read') !== -1) {
+      var payments = readAll('Payments');
+      payments.sort(function (a, b) { return (b.paymentDate || '').localeCompare(a.paymentDate || ''); });
+      data.recentPayments = payments.slice(0, 5);
+    }
+
+    // Recent complaints
     if (permissions.indexOf('complaints.read') !== -1) {
       var complaints = readAll('Complaints');
-      sections.complaints = {
-        total: complaints.length,
-        open: complaints.filter(function (c) { return c.statusKey === 'OPEN' || c.statusKey === 'ASSIGNED'; }).length,
-        resolved: complaints.filter(function (c) { return c.statusKey === 'RESOLVED' || c.statusKey === 'CLOSED'; }).length
-      };
+      complaints.sort(function (a, b) { return (b.raisedAt || b.createdAt || '').localeCompare(a.raisedAt || a.createdAt || ''); });
+      data.recentComplaints = complaints.slice(0, 5);
     }
 
-    // Notices section
+    // Recent notices
     if (permissions.indexOf('notices.read') !== -1) {
       var notices = readAll('Notices');
-      sections.notices = {
-        total: notices.length,
-        published: notices.filter(function (n) { return n.statusKey === 'PUBLISHED'; }).length
-      };
+      notices.sort(function (a, b) { return (b.noticeDate || '').localeCompare(a.noticeDate || ''); });
+      data.recentNotices = notices.slice(0, 5);
     }
 
-    // Visitors section
+    // Recent visitors
     if (permissions.indexOf('visitors.read') !== -1) {
       var visitors = readAll('Visitors');
-      var today = Utils.today();
-      sections.visitors = {
-        inside: visitors.filter(function (v) { return v.statusKey === 'INSIDE'; }).length,
-        todayEntries: visitors.filter(function (v) { return v.entryAt && v.entryAt.indexOf(today) === 0; }).length
-      };
+      visitors.sort(function (a, b) { return (b.entryAt || '').localeCompare(a.entryAt || ''); });
+      data.recentVisitors = visitors.slice(0, 5);
     }
+
+    // Expenses summary
+    if (permissions.indexOf('expenses.read') !== -1) {
+      var expenses = readAll('Expenses');
+      var totalExpenses = 0;
+      for (var e = 0; e < expenses.length; e++) {
+        if (expenses[e].statusKey !== 'CANCELLED') {
+          totalExpenses += Utils.toNumber(expenses[e].amount, 0);
+        }
+      }
+      data.totalExpenses = Utils.round2(totalExpenses);
+    }
+
+    // Quick actions
+    var actions = [
+      { label: 'New Payment', route: '/payments/new', permission: 'payments.create', icon: 'payments' },
+      { label: 'New Complaint', route: '/complaints/new', permission: 'complaints.create', icon: 'complaints' },
+      { label: 'New Notice', route: '/notices/new', permission: 'notices.create', icon: 'notices' },
+      { label: 'Log Visitor', route: '/visitors/new', permission: 'visitors.create', icon: 'visitors' }
+    ];
+    data.quickActions = actions.filter(function (a) { return permissions.indexOf(a.permission) !== -1; });
 
     return {
       ok: true,
-      data: {
-        sections: sections,
-        generatedAt: Utils.now()
-      }
+      data: data
     };
   }
 

@@ -26,34 +26,15 @@ import type {
   ReportTotals,
 } from '@/types/domain';
 
-/** Report keys known to `REPORT_CATALOG` (`ReportService.gs:279`).
- *
- * Mirrored so the UI can offer a typed union and so a deep link to an unknown
- * report can be rejected before a round trip. The catalog remains the runtime
- * authority — this list exists only to fail fast. */
-export const REPORT_KEYS = [
-  'demand-summary',
-  'payment-register',
-  'outstanding',
-  'complaint-summary',
-  'visitor-log',
-  'expense-summary',
-] as const;
-
-export type ReportKey = (typeof REPORT_KEYS)[number];
+/** Report keys are fetched from the catalog at runtime, not hardcoded. */
+export type ReportKey = string;
 
 /** Export formats accepted by `reports.export`.
- *
- * NOTE: the backend validator only checks that `format` is *present*
- * (`requireField('format','Format')`, `Routes.gs:1028`) and `exportReport`
- * always writes CSV regardless of the value. CSV is therefore the only format
- * that actually produces a usable file; it is the only one offered. */
-export const EXPORT_FORMATS = ['CSV'] as const;
+ * The backend only produces CSV regardless of the value. */
+export type ExportFormat = string;
 
-export type ExportFormat = (typeof EXPORT_FORMATS)[number];
-
-export function isReportKey(value: string): value is ReportKey {
-  return (REPORT_KEYS as readonly string[]).indexOf(value) !== -1;
+export function isReportKey(_value: string): _value is ReportKey {
+  return true;
 }
 
 /** The report catalog, keyed by reportKey. */
@@ -138,19 +119,10 @@ export function labelFromKey(key: string): string {
 }
 
 /** Columns that hold money. `run` projects them as STRINGS, so they are
- *  right-aligned and formatted rather than printed raw. */
-const MONEY_COLUMN_KEYS = [
-  'amount',
-  'paidAmount',
-  'balanceAmount',
-  'totalDemand',
-  'totalPaid',
-  'totalBalance',
-  'totalAmount',
-];
-
+ *  right-aligned and formatted rather than printed raw.
+ *  Derived from column name patterns rather than a hardcoded list. */
 export function isMoneyColumn(key: string): boolean {
-  return MONEY_COLUMN_KEYS.indexOf(key) !== -1;
+  return /amount|price|cost|fee|charge|total|balance|paid|revenue|expense|salary|wage|bonus|deduction|advance|allowance|interest|fine|penalty/i.test(key);
 }
 
 /** Columns that hold a status key and should render through `StatusBadge`. */
