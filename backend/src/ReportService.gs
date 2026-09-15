@@ -202,6 +202,8 @@ var ReportService = (function () {
       flatsMembers: { totalFlats: 0, totalMembers: 0, occupied: 0, vacant: 0 },
       finance: { totalDemand: 0, totalCollection: 0, totalOutstanding: 0, overdueAmount: 0 },
       counts: { paidMembers: 0, partialMembers: 0, pendingMembers: 0 },
+      totalExpenses: 0,
+      monthlyExpenses: [],
       recentPayments: [],
       recentComplaints: [],
       recentNotices: [],
@@ -210,130 +212,147 @@ var ReportService = (function () {
     };
 
     // Flats/Members
-    if (permissions.indexOf('flats.read') !== -1) {
-      var flats = readAll('Flats');
-      var members = readAll('Members');
-      data.flatsMembers = {
-        totalFlats: flats.length,
-        occupied: flats.filter(function (f) { return f.statusKey === 'OCCUPIED'; }).length,
-        vacant: flats.filter(function (f) { return f.statusKey === 'VACANT'; }).length,
-        totalMembers: members.filter(function (m) { return m.statusKey === 'ACTIVE'; }).length
-      };
-    }
+    try {
+      if (permissions.indexOf('flats.read') !== -1) {
+        var flats = readAll('Flats');
+        var members = readAll('Members');
+        data.flatsMembers = {
+          totalFlats: flats.length,
+          occupied: flats.filter(function (f) { return f.statusKey === 'OCCUPIED'; }).length,
+          vacant: flats.filter(function (f) { return f.statusKey === 'VACANT'; }).length,
+          totalMembers: members.filter(function (m) { return m.statusKey === 'ACTIVE'; }).length
+        };
+      }
+    } catch (e) {}
 
     // Finance (Demands) — including monthly breakdown for charts
-    if (permissions.indexOf('maintenance.read') !== -1) {
-      var demands = readAll('Demands');
-      var payments = readAll('Payments');
-      var totalDemand = 0;
-      var totalCollection = 0;
-      var totalOutstanding = 0;
-      var overdueAmount = 0;
-      var memberPaid = {};
-      var memberPartial = {};
-      var memberPending = {};
-      var monthlyDemand = {};
-      var monthlyCollection = {};
+    try {
+      if (permissions.indexOf('maintenance.read') !== -1) {
+        var demands = readAll('Demands');
+        var totalDemand = 0;
+        var totalCollection = 0;
+        var totalOutstanding = 0;
+        var overdueAmount = 0;
+        var memberPaid = {};
+        var memberPartial = {};
+        var memberPending = {};
+        var monthlyDemand = {};
+        var monthlyCollection = {};
 
-      for (var i = 0; i < demands.length; i++) {
-        var d = demands[i];
-        var demand = Utils.toNumber(d.totalPayable, 0);
-        var paid = Utils.toNumber(d.paidAmount, 0);
-        var balance = Utils.toNumber(d.balanceAmount, 0);
-        totalDemand += demand;
-        totalCollection += paid;
-        totalOutstanding += balance;
-        if (d.statusKey === 'OVERDUE') { overdueAmount += balance; }
-        var mid = d.memberId || d.flatId;
-        if (mid) {
-          if (balance <= 0) { memberPaid[mid] = true; delete memberPartial[mid]; delete memberPending[mid]; }
-          else if (paid > 0) { memberPartial[mid] = true; delete memberPending[mid]; }
-          else if (!memberPaid[mid] && !memberPartial[mid]) { memberPending[mid] = true; }
-        }
-        // Monthly demand by periodKey
-        var period = (d.periodKey || '').substring(0, 7);
-        if (period) {
-          monthlyDemand[period] = (monthlyDemand[period] || 0) + demand;
-        }
-      }
-
-      // Monthly collection from payments
-      for (var p = 0; p < payments.length; p++) {
-        var pay = payments[p];
-        if (pay.statusKey === 'CANCELLED') continue;
-        var payMonth = (pay.paymentDate || '').substring(0, 7);
-        if (payMonth) {
-          monthlyCollection[payMonth] = (monthlyCollection[payMonth] || 0) + Utils.toNumber(pay.amount, 0);
-        }
-      }
-
-      // Merge months and sort
-      var allMonths = Object.keys(Object.assign({}, monthlyDemand, monthlyCollection)).sort();
-      var monthlyData = allMonths.map(function(m) {
-        return { month: m, demand: Utils.round2(monthlyDemand[m] || 0), collection: Utils.round2(monthlyCollection[m] || 0) };
-      });
-
-      data.finance = {
-        totalDemand: Utils.round2(totalDemand),
-        totalCollection: Utils.round2(totalCollection),
-        totalOutstanding: Utils.round2(totalOutstanding),
-        overdueAmount: Utils.round2(overdueAmount),
-        monthly: monthlyData
-      };
-      data.counts = {
-        paidMembers: Object.keys(memberPaid).length,
-        partialMembers: Object.keys(memberPartial).length,
-        pendingMembers: Object.keys(memberPending).length
-      };
-    }
-
-    // Recent payments
-    if (permissions.indexOf('payments.read') !== -1) {
-      var payments = readAll('Payments');
-      payments.sort(function (a, b) { return (b.paymentDate || '').localeCompare(a.paymentDate || ''); });
-      data.recentPayments = payments.slice(0, 5);
-    }
-
-    // Recent complaints
-    if (permissions.indexOf('complaints.read') !== -1) {
-      var complaints = readAll('Complaints');
-      complaints.sort(function (a, b) { return (b.raisedAt || b.createdAt || '').localeCompare(a.raisedAt || a.createdAt || ''); });
-      data.recentComplaints = complaints.slice(0, 5);
-    }
-
-    // Recent notices
-    if (permissions.indexOf('notices.read') !== -1) {
-      var notices = readAll('Notices');
-      notices.sort(function (a, b) { return (b.noticeDate || '').localeCompare(a.noticeDate || ''); });
-      data.recentNotices = notices.slice(0, 5);
-    }
-
-    // Recent visitors
-    if (permissions.indexOf('visitors.read') !== -1) {
-      var visitors = readAll('Visitors');
-      visitors.sort(function (a, b) { return (b.entryAt || '').localeCompare(a.entryAt || ''); });
-      data.recentVisitors = visitors.slice(0, 5);
-    }
-
-    // Expenses summary — including monthly breakdown
-    if (permissions.indexOf('expenses.read') !== -1) {
-      var expenses = readAll('Expenses');
-      var totalExpenses = 0;
-      var monthlyExpenses = {};
-      for (var e = 0; e < expenses.length; e++) {
-        if (expenses[e].statusKey !== 'CANCELLED') {
-          var amt = Utils.toNumber(expenses[e].amount, 0);
-          totalExpenses += amt;
-          var expMonth = (expenses[e].expenseDate || '').substring(0, 7);
-          if (expMonth) {
-            monthlyExpenses[expMonth] = (monthlyExpenses[expMonth] || 0) + amt;
+        for (var i = 0; i < demands.length; i++) {
+          var d = demands[i];
+          var demand = Utils.toNumber(d.totalPayable, 0);
+          var paid = Utils.toNumber(d.paidAmount, 0);
+          var balance = Utils.toNumber(d.balanceAmount, 0);
+          totalDemand += demand;
+          totalCollection += paid;
+          totalOutstanding += balance;
+          if (d.statusKey === 'OVERDUE') { overdueAmount += balance; }
+          var mid = d.memberId || d.flatId;
+          if (mid) {
+            if (balance <= 0) { memberPaid[mid] = true; delete memberPartial[mid]; delete memberPending[mid]; }
+            else if (paid > 0) { memberPartial[mid] = true; delete memberPending[mid]; }
+            else if (!memberPaid[mid] && !memberPartial[mid]) { memberPending[mid] = true; }
+          }
+          var period = (d.periodKey || '').substring(0, 7);
+          if (period) {
+            monthlyDemand[period] = (monthlyDemand[period] || 0) + demand;
           }
         }
+
+        // Monthly collection from Payments
+        try {
+          var payRows = readAll('Payments');
+          for (var p = 0; p < payRows.length; p++) {
+            var pay = payRows[p];
+            if (pay.statusKey === 'CANCELLED') continue;
+            var payMonth = (pay.paymentDate || '').substring(0, 7);
+            if (payMonth) {
+              monthlyCollection[payMonth] = (monthlyCollection[payMonth] || 0) + Utils.toNumber(pay.amount, 0);
+            }
+          }
+        } catch (e2) {}
+
+        var allMonths = Object.keys(Object.assign({}, monthlyDemand, monthlyCollection)).sort();
+        var monthlyData = allMonths.map(function(m) {
+          return { month: m, demand: Utils.round2(monthlyDemand[m] || 0), collection: Utils.round2(monthlyCollection[m] || 0) };
+        });
+
+        data.finance = {
+          totalDemand: Utils.round2(totalDemand),
+          totalCollection: Utils.round2(totalCollection),
+          totalOutstanding: Utils.round2(totalOutstanding),
+          overdueAmount: Utils.round2(overdueAmount),
+          monthly: monthlyData
+        };
+        data.counts = {
+          paidMembers: Object.keys(memberPaid).length,
+          partialMembers: Object.keys(memberPartial).length,
+          pendingMembers: Object.keys(memberPending).length
+        };
       }
-      data.totalExpenses = Utils.round2(totalExpenses);
-      data.monthlyExpenses = Object.keys(monthlyExpenses).sort().map(function(m) {
-        return { month: m, amount: Utils.round2(monthlyExpenses[m]) };
-      });
+    } catch (e) {}
+
+    // Recent payments
+    try {
+      if (permissions.indexOf('payments.read') !== -1) {
+        var recentPays = readAll('Payments');
+        recentPays.sort(function (a, b) { return (b.paymentDate || '').localeCompare(a.paymentDate || ''); });
+        data.recentPayments = recentPays.slice(0, 5);
+      }
+    } catch (e) {}
+
+    // Recent complaints
+    try {
+      if (permissions.indexOf('complaints.read') !== -1) {
+        var complaints = readAll('Complaints');
+        complaints.sort(function (a, b) { return (b.raisedAt || b.createdAt || '').localeCompare(a.raisedAt || a.createdAt || ''); });
+        data.recentComplaints = complaints.slice(0, 5);
+      }
+    } catch (e) {}
+
+    // Recent notices
+    try {
+      if (permissions.indexOf('notices.read') !== -1) {
+        var notices = readAll('Notices');
+        notices.sort(function (a, b) { return (b.noticeDate || '').localeCompare(a.noticeDate || ''); });
+        data.recentNotices = notices.slice(0, 5);
+      }
+    } catch (e) {}
+
+    // Recent visitors
+    try {
+      if (permissions.indexOf('visitors.read') !== -1) {
+        var visitors = readAll('Visitors');
+        visitors.sort(function (a, b) { return (b.entryAt || '').localeCompare(a.entryAt || ''); });
+        data.recentVisitors = visitors.slice(0, 5);
+      }
+    } catch (e) {}
+
+    // Expenses summary — including monthly breakdown
+    try {
+      if (permissions.indexOf('expenses.read') !== -1) {
+        var expenses = readAll('Expenses');
+        var totalExpenses = 0;
+        var monthlyExpenses = {};
+        for (var e = 0; e < expenses.length; e++) {
+          if (expenses[e].statusKey !== 'CANCELLED') {
+            var amt = Utils.toNumber(expenses[e].amount, 0);
+            totalExpenses += amt;
+            var expMonth = (expenses[e].expenseDate || '').substring(0, 7);
+            if (expMonth) {
+              monthlyExpenses[expMonth] = (monthlyExpenses[expMonth] || 0) + amt;
+            }
+          }
+        }
+        data.totalExpenses = Utils.round2(totalExpenses);
+        data.monthlyExpenses = Object.keys(monthlyExpenses).sort().map(function(m) {
+          return { month: m, amount: Utils.round2(monthlyExpenses[m]) };
+        });
+      }
+    } catch (e) {
+      data.totalExpenses = 0;
+      data.monthlyExpenses = [];
     }
 
     // Quick actions
